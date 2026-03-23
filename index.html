@@ -210,6 +210,37 @@ button{cursor:pointer;font-family:'Noto Sans KR',sans-serif;border:none;border-r
 .s-수정중{background:#fff3e0;color:#b36a00}
 .s-완료{background:#e8f4e8;color:#2d6e2d}
 
+/* ═══ DIAGRAM ════════════════════════════════════════════════ */
+.diagram-wrap{display:flex;flex-direction:column;height:calc(100vh - var(--header));overflow:hidden}
+.diagram-toolbar{padding:10px 16px;border-bottom:1px solid var(--border);background:var(--white);
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex-shrink:0}
+.diagram-canvas-wrap{flex:1;position:relative;overflow:hidden;background:#f8f5ef;
+  background-image:radial-gradient(circle,#d9cfbb 1px,transparent 1px);
+  background-size:24px 24px}
+#diagram-canvas{position:absolute;inset:0;width:100%;height:100%;cursor:grab}
+#diagram-canvas.grabbing{cursor:grabbing}
+.dg-node{position:absolute;border-radius:10px;padding:10px 14px;cursor:grab;
+  user-select:none;transition:box-shadow .15s;min-width:100px;max-width:180px;
+  text-align:center;font-size:12px;font-weight:600;border:2px solid transparent;
+  display:flex;flex-direction:column;align-items:center;gap:4px}
+.dg-node:active{cursor:grabbing}
+.dg-node.selected{outline:3px solid var(--gold);outline-offset:2px}
+.dg-node.type-character{background:#fff3e0;border-color:#e8bc5c;color:#7a4a00}
+.dg-node.type-place{background:#e8f4e8;border-color:#4caf50;color:#1b5e20}
+.dg-node.type-event{background:#e8eaf6;border-color:#7986cb;color:#283593}
+.dg-node.type-idea{background:#fce4ec;border-color:#f48fb1;color:#880e4f}
+.dg-node.type-world{background:#e0f7fa;border-color:#4dd0e1;color:#006064}
+.dg-node.type-memo{background:#fffde7;border-color:#ffee58;color:#827717}
+.dg-node-icon{font-size:18px}
+.dg-node-label{word-break:break-all;line-height:1.3}
+.dg-node-sub{font-size:10px;font-weight:400;opacity:.7;line-height:1.3}
+.diagram-tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+.diagram-tab{padding:5px 14px;border-radius:20px;font-size:12px;font-weight:600;
+  cursor:pointer;border:1.5px solid var(--border);background:transparent;color:var(--muted);
+  white-space:nowrap;font-family:'Noto Sans KR',sans-serif;transition:all .15s}
+.diagram-tab.active{background:var(--gold);color:#fff;border-color:var(--gold)}
+.diagram-tab:hover:not(.active){background:var(--cream);border-color:var(--gold)}
+
 /* ═══ PROGRESS BAR ════════════════════════════════════════════ */
 .progress-bar{height:10px;background:var(--cream);border-radius:10px;overflow:hidden}
 .progress-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--teal2));
@@ -322,6 +353,11 @@ button{cursor:pointer;font-family:'Noto Sans KR',sans-serif;border:none;border-r
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
           집필 편집기 <span class="nav-badge" id="badge-chapters"></span>
         </button>
+        <div class="nav-section">시각화</div>
+        <button class="nav-item" onclick="navigate('diagram')" data-tab="diagram">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/><line x1="12" y1="8" x2="12" y2="14"/><line x1="12" y1="14" x2="5" y2="16"/><line x1="12" y1="14" x2="19" y2="16"/></svg>
+          다이어그램
+        </button>
         <div class="nav-section">출고</div>
         <button class="nav-item" onclick="navigate('schedule')" data-tab="schedule">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
@@ -409,6 +445,21 @@ function importData(e) {
   reader.onload = (ev) => {
     try {
       const data = JSON.parse(ev.target.result);
+      // 전체 백업 (배열) 처리
+      if (Array.isArray(data)) {
+        if (!confirm(`전체 백업 파일입니다. 작품 ${data.length}개를 불러올까요?\n(같은 ID의 작품은 덮어씁니다)`)) return;
+        data.forEach(p => {
+          if (!p.id) p.id = Date.now() + Math.random();
+          const idx = state.projects.findIndex(x => x.id === p.id);
+          if (idx >= 0) state.projects[idx] = p;
+          else state.projects.push(p);
+        });
+        saveToStorage();
+        toast(`전체 백업 불러오기 완료! (${data.length}개) 📖`);
+        renderHome();
+        return;
+      }
+      // 단일 작품 처리
       if (!data.id) data.id = Date.now();
       const exists = state.projects.findIndex(p => p.id === data.id);
       if (exists >= 0) {
@@ -475,6 +526,7 @@ function navigate(tab) {
     plot: renderPlot,
     chapters: renderChapters,
     schedule: renderSchedule,
+    diagram: renderDiagram,
   };
   if (renders[tab]) renders[tab]();
 }
@@ -1256,6 +1308,453 @@ function renderSchedule() {
     </div>`;
 }
 
+
+// ═══════════════════════════════════════════════════════════════
+// DIAGRAM ENGINE
+// ═══════════════════════════════════════════════════════════════
+const DG_TYPES = [
+  {id:'character', label:'인물', icon:'👤', desc:'등장인물'},
+  {id:'place',     label:'장소', icon:'📍', desc:'지역/장소'},
+  {id:'event',     label:'사건', icon:'⚡', desc:'사건/사고'},
+  {id:'idea',      label:'아이디어', icon:'💡', desc:'아이디어'},
+  {id:'world',     label:'세계관', icon:'🌍', desc:'세계관 요소'},
+  {id:'memo',      label:'메모', icon:'📝', desc:'자유 메모'},
+];
+
+const DG_DIAGRAM_TYPES = [
+  {id:'relation',  label:'인물 관계도'},
+  {id:'plot',      label:'플롯 흐름도'},
+  {id:'world',     label:'세계관 맵'},
+  {id:'free',      label:'자유 메모'},
+];
+
+let dgState = {
+  activeDiagramId: null,
+  selectedNodeId: null,
+  connecting: false,
+  connectFrom: null,
+  pan: {x:0, y:0},
+  zoom: 1,
+  dragging: null,
+  dragOffset: {x:0, y:0},
+};
+
+function getDiagrams() { return getProject().diagrams || []; }
+function getActiveDiagram() { return getDiagrams().find(d => d.id === dgState.activeDiagramId); }
+
+function saveDiagram() {
+  const p = getProject();
+  if (!p.diagrams) p.diagrams = [];
+  autoSave();
+}
+
+// ── 다이어그램 탭 렌더 ──
+function renderDiagram() {
+  const p = getProject();
+  if (!p.diagrams) p.diagrams = [];
+  const diagrams = p.diagrams;
+
+  // 활성 다이어그램이 없으면 첫 번째로
+  if (!dgState.activeDiagramId && diagrams.length > 0) {
+    dgState.activeDiagramId = diagrams[0].id;
+  }
+
+  const tabsHtml = diagrams.map(d => `
+    <button class="diagram-tab ${d.id===dgState.activeDiagramId?'active':''}"
+      onclick="switchDiagram('${d.id}')">${esc(d.name)}</button>`).join('');
+
+  document.getElementById('main').innerHTML = `
+    <div class="diagram-wrap">
+      <div class="diagram-toolbar">
+        <div class="diagram-tabs">${tabsHtml}</div>
+        <button class="btn btn-gold btn-sm" onclick="showNewDiagramModal()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          새 다이어그램
+        </button>
+        ${diagrams.length>0?`
+        <div style="width:1px;height:20px;background:var(--border)"></div>
+        <button class="btn btn-outline btn-sm" onclick="showAddNodeModal()">＋ 노드 추가</button>
+        <button class="btn btn-outline btn-sm" onclick="toggleConnectMode()" id="btn-connect">🔗 연결</button>
+        <button class="btn btn-outline btn-sm" onclick="resetView()">⊕ 화면 맞춤</button>
+        <button class="btn btn-outline btn-sm" onclick="clearSelection()">✕ 선택 해제</button>
+        <div style="flex:1"></div>
+        <button class="btn btn-danger btn-sm" onclick="deleteActiveDiagram()">다이어그램 삭제</button>
+        `:''}
+      </div>
+      <div class="diagram-canvas-wrap" id="dg-wrap">
+        ${diagrams.length===0
+          ? `<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--muted)">
+              <div style="font-size:40px">🗂️</div>
+              <div style="font-size:15px">다이어그램을 만들어보세요</div>
+              <button class="btn btn-gold" onclick="showNewDiagramModal()">＋ 새 다이어그램 만들기</button>
+            </div>`
+          : `<svg id="diagram-svg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible"><defs><marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="var(--teal)"/></marker></defs><g id="svg-edges"></g></svg>
+             <div id="diagram-canvas" style="position:absolute;inset:0;"></div>`}
+      </div>
+    </div>`;
+
+  if (diagrams.length > 0) {
+    dgState.pan = {x:0, y:0};
+    dgState.zoom = 1;
+    renderDiagramCanvas();
+    setupDiagramEvents();
+  }
+}
+
+function switchDiagram(id) {
+  dgState.activeDiagramId = id;
+  dgState.selectedNodeId = null;
+  dgState.connecting = false;
+  dgState.connectFrom = null;
+  renderDiagram();
+}
+
+function renderDiagramCanvas() {
+  const dg = getActiveDiagram();
+  if (!dg) return;
+  const canvas = document.getElementById('diagram-canvas');
+  const svgEdges = document.getElementById('svg-edges');
+  if (!canvas || !svgEdges) return;
+
+  // 노드 렌더
+  canvas.innerHTML = '';
+  (dg.nodes||[]).forEach(node => {
+    const el = document.createElement('div');
+    el.className = `dg-node type-${node.type}${node.id===dgState.selectedNodeId?' selected':''}`;
+    el.id = 'node-'+node.id;
+    el.style.left = (node.x + dgState.pan.x) + 'px';
+    el.style.top = (node.y + dgState.pan.y) + 'px';
+    el.dataset.id = node.id;
+    const typeInfo = DG_TYPES.find(t=>t.id===node.type)||DG_TYPES[0];
+    el.innerHTML = `
+      <div class="dg-node-icon">${typeInfo.icon}</div>
+      <div class="dg-node-label">${esc(node.label)}</div>
+      ${node.sub?`<div class="dg-node-sub">${esc(node.sub)}</div>`:''}
+    `;
+    canvas.appendChild(el);
+  });
+
+  // 엣지(연결선) 렌더
+  const wrap = document.getElementById('dg-wrap');
+  const wrapRect = wrap ? wrap.getBoundingClientRect() : {width:800,height:600};
+  svgEdges.innerHTML = '<defs><marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="var(--teal)"/></marker></defs>';
+  (dg.edges||[]).forEach((edge,ei) => {
+    const from = (dg.nodes||[]).find(n=>n.id===edge.from);
+    const to = (dg.nodes||[]).find(n=>n.id===edge.to);
+    if (!from||!to) return;
+    const fx = from.x+dgState.pan.x+90, fy = from.y+dgState.pan.y+30;
+    const tx = to.x+dgState.pan.x+90, ty = to.y+dgState.pan.y+30;
+    const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',fx); line.setAttribute('y1',fy);
+    line.setAttribute('x2',tx); line.setAttribute('y2',ty);
+    line.setAttribute('stroke','var(--teal)'); line.setAttribute('stroke-width','2');
+    line.setAttribute('marker-end','url(#arrow)');
+    g.appendChild(line);
+    if (edge.label) {
+      const text = document.createElementNS('http://www.w3.org/2000/svg','text');
+      text.setAttribute('x',(fx+tx)/2); text.setAttribute('y',(fy+ty)/2-6);
+      text.setAttribute('text-anchor','middle'); text.setAttribute('font-size','11');
+      text.setAttribute('fill','var(--teal)'); text.setAttribute('font-family','Noto Sans KR,sans-serif');
+      text.setAttribute('font-weight','600');
+      const bg = document.createElementNS('http://www.w3.org/2000/svg','rect');
+      bg.setAttribute('x',(fx+tx)/2-text.textContent.length*3-16);
+      bg.setAttribute('y',(fy+ty)/2-20); bg.setAttribute('width',Math.max(40,edge.label.length*10+16));
+      bg.setAttribute('height',16); bg.setAttribute('rx',4); bg.setAttribute('fill','#e8f4f4');
+      g.appendChild(bg);
+      text.textContent = edge.label;
+      g.appendChild(text);
+    }
+    // 삭제 버튼 (가운데)
+    const delBtn = document.createElementNS('http://www.w3.org/2000/svg','text');
+    delBtn.setAttribute('x',(fx+tx)/2+2); delBtn.setAttribute('y',(fy+ty)/2+18);
+    delBtn.setAttribute('text-anchor','middle'); delBtn.setAttribute('font-size','14');
+    delBtn.setAttribute('fill','var(--rust)'); delBtn.setAttribute('cursor','pointer');
+    delBtn.setAttribute('style','pointer-events:all');
+    delBtn.textContent='✕';
+    delBtn.onclick=()=>deleteEdge(ei);
+    g.appendChild(delBtn);
+    svgEdges.appendChild(g);
+  });
+}
+
+function setupDiagramEvents() {
+  const canvas = document.getElementById('diagram-canvas');
+  if (!canvas) return;
+
+  // 노드 드래그
+  canvas.addEventListener('pointerdown', e => {
+    const nodeEl = e.target.closest('.dg-node');
+    if (!nodeEl) { dgState.selectedNodeId=null; renderDiagramCanvas(); return; }
+    const id = nodeEl.dataset.id;
+
+    // 연결 모드
+    if (dgState.connecting) {
+      if (!dgState.connectFrom) {
+        dgState.connectFrom = id;
+        nodeEl.style.outline = '3px solid var(--rust)';
+        toast('연결할 두 번째 노드를 탭하세요');
+      } else if (dgState.connectFrom !== id) {
+        showConnectLabelModal(dgState.connectFrom, id);
+        dgState.connectFrom = null;
+        toggleConnectMode(false);
+      }
+      return;
+    }
+
+    // 선택
+    dgState.selectedNodeId = id;
+    const rect = nodeEl.getBoundingClientRect();
+    const wrapRect = document.getElementById('dg-wrap').getBoundingClientRect();
+    dgState.dragging = id;
+    dgState.dragOffset = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    nodeEl.style.boxShadow = '0 8px 24px rgba(0,0,0,.2)';
+    nodeEl.style.zIndex = 100;
+    e.preventDefault();
+
+    // 더블클릭 → 편집
+    nodeEl.addEventListener('dblclick', () => showEditNodeModal(id), {once:true});
+  });
+
+  canvas.addEventListener('pointermove', e => {
+    if (!dgState.dragging) return;
+    const dg = getActiveDiagram();
+    const wrapRect = document.getElementById('dg-wrap').getBoundingClientRect();
+    const node = (dg.nodes||[]).find(n=>n.id===dgState.dragging);
+    if (!node) return;
+    node.x = e.clientX - wrapRect.left - dgState.dragOffset.x - dgState.pan.x;
+    node.y = e.clientY - wrapRect.top - dgState.dragOffset.y - dgState.pan.y;
+    const el = document.getElementById('node-'+dgState.dragging);
+    if (el) { el.style.left=(node.x+dgState.pan.x)+'px'; el.style.top=(node.y+dgState.pan.y)+'px'; }
+    renderEdgesOnly();
+  });
+
+  canvas.addEventListener('pointerup', e => {
+    if (dgState.dragging) {
+      saveDiagram();
+      const el = document.getElementById('node-'+dgState.dragging);
+      if (el) { el.style.boxShadow=''; el.style.zIndex=''; }
+      dgState.dragging = null;
+    }
+  });
+
+  // 컨텍스트 메뉴 (우클릭/롱프레스 → 노드 메뉴)
+  canvas.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    const nodeEl = e.target.closest('.dg-node');
+    if (nodeEl) showNodeContextMenu(nodeEl.dataset.id, e.clientX, e.clientY);
+  });
+}
+
+function renderEdgesOnly() {
+  const dg = getActiveDiagram();
+  if (!dg) return;
+  const svgEdges = document.getElementById('svg-edges');
+  if (!svgEdges) return;
+  svgEdges.innerHTML = '<defs><marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="var(--teal)"/></marker></defs>';
+  (dg.edges||[]).forEach((edge,ei) => {
+    const from = (dg.nodes||[]).find(n=>n.id===edge.from);
+    const to = (dg.nodes||[]).find(n=>n.id===edge.to);
+    if (!from||!to) return;
+    const fx=from.x+dgState.pan.x+90, fy=from.y+dgState.pan.y+30;
+    const tx=to.x+dgState.pan.x+90, ty=to.y+dgState.pan.y+30;
+    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',fx);line.setAttribute('y1',fy);
+    line.setAttribute('x2',tx);line.setAttribute('y2',ty);
+    line.setAttribute('stroke','var(--teal)');line.setAttribute('stroke-width','2');
+    line.setAttribute('marker-end','url(#arrow)');
+    svgEdges.appendChild(line);
+  });
+}
+
+function resetView() { dgState.pan={x:0,y:0}; dgState.zoom=1; renderDiagramCanvas(); }
+function clearSelection() { dgState.selectedNodeId=null; renderDiagramCanvas(); }
+
+function toggleConnectMode(force) {
+  dgState.connecting = force !== undefined ? force : !dgState.connecting;
+  dgState.connectFrom = null;
+  const btn = document.getElementById('btn-connect');
+  if (btn) {
+    btn.style.background = dgState.connecting ? 'var(--teal)' : '';
+    btn.style.color = dgState.connecting ? '#fff' : '';
+    btn.style.borderColor = dgState.connecting ? 'var(--teal)' : '';
+  }
+  if (dgState.connecting) toast('연결할 첫 번째 노드를 탭하세요');
+}
+
+function deleteEdge(idx) {
+  const dg = getActiveDiagram();
+  if (!dg) return;
+  dg.edges.splice(idx,1);
+  saveDiagram(); renderDiagramCanvas();
+}
+
+function deleteNode(id) {
+  const dg = getActiveDiagram();
+  if (!dg) return;
+  dg.nodes = (dg.nodes||[]).filter(n=>n.id!==id);
+  dg.edges = (dg.edges||[]).filter(e=>e.from!==id&&e.to!==id);
+  dgState.selectedNodeId=null;
+  saveDiagram(); renderDiagramCanvas();
+}
+
+// ── 모달들 ──
+function showNewDiagramModal() {
+  showModal(`
+    <div class="modal-title">새 다이어그램</div>
+    <div style="margin-bottom:12px"><label class="label">이름 *</label>
+      <input id="dg-name" placeholder="예: 주요 인물 관계도"></div>
+    <div style="margin-bottom:20px"><label class="label">종류</label>
+      <select id="dg-type">${DG_DIAGRAM_TYPES.map(t=>`<option value="${t.id}">${t.label}</option>`).join('')}</select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">취소</button>
+      <button class="btn btn-gold" onclick="createDiagram()">만들기</button>
+    </div>`);
+  setTimeout(()=>document.getElementById('dg-name')?.focus(),100);
+}
+
+function createDiagram() {
+  const name = document.getElementById('dg-name').value.trim();
+  if (!name) { toast('이름을 입력해주세요.'); return; }
+  const p = getProject();
+  if (!p.diagrams) p.diagrams = [];
+  const dg = { id:uid(), name, type:document.getElementById('dg-type').value, nodes:[], edges:[] };
+  p.diagrams.push(dg);
+  dgState.activeDiagramId = dg.id;
+  saveDiagram(); closeModal(); renderDiagram();
+}
+
+function deleteActiveDiagram() {
+  if (!confirm('이 다이어그램을 삭제하시겠습니까?')) return;
+  const p = getProject();
+  p.diagrams = (p.diagrams||[]).filter(d=>d.id!==dgState.activeDiagramId);
+  dgState.activeDiagramId = p.diagrams[0]?.id || null;
+  saveDiagram(); renderDiagram();
+}
+
+function showAddNodeModal() {
+  const dg = getActiveDiagram();
+  if (!dg) return;
+  showModal(`
+    <div class="modal-title">노드 추가</div>
+    <div style="margin-bottom:12px"><label class="label">이름 *</label>
+      <input id="nd-label" placeholder="노드 이름"></div>
+    <div style="margin-bottom:12px"><label class="label">종류</label>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px">
+        ${DG_TYPES.map((t,i)=>`
+          <label style="display:flex;align-items:center;gap:6px;padding:8px;border:1.5px solid var(--border);
+            border-radius:8px;cursor:pointer;font-size:12px;font-weight:600">
+            <input type="radio" name="nd-type" value="${t.id}" ${i===0?'checked':''} style="width:auto;border:none;padding:0">
+            ${t.icon} ${t.label}
+          </label>`).join('')}
+      </div>
+    </div>
+    <div style="margin-bottom:20px"><label class="label">부제 (선택)</label>
+      <input id="nd-sub" placeholder="예: 주인공, 악역, 왕국..."></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">취소</button>
+      <button class="btn btn-gold" onclick="addNode()">추가</button>
+    </div>`);
+  setTimeout(()=>document.getElementById('nd-label')?.focus(),100);
+}
+
+function addNode() {
+  const label = document.getElementById('nd-label').value.trim();
+  if (!label) { toast('이름을 입력해주세요.'); return; }
+  const type = document.querySelector('input[name="nd-type"]:checked')?.value || 'idea';
+  const sub = document.getElementById('nd-sub').value.trim();
+  const dg = getActiveDiagram();
+  const wrap = document.getElementById('dg-wrap');
+  const cx = wrap ? wrap.offsetWidth/2 - dgState.pan.x - 90 : 200;
+  const cy = wrap ? wrap.offsetHeight/2 - dgState.pan.y - 30 : 150;
+  if (!dg.nodes) dg.nodes = [];
+  dg.nodes.push({ id:uid(), label, type, sub, x:cx + (Math.random()-0.5)*80, y:cy + (Math.random()-0.5)*80 });
+  saveDiagram(); closeModal(); renderDiagramCanvas();
+  toast('노드가 추가됐어요!');
+}
+
+function showEditNodeModal(id) {
+  const dg = getActiveDiagram();
+  const node = (dg?.nodes||[]).find(n=>n.id===id);
+  if (!node) return;
+  showModal(`
+    <div class="modal-title">노드 편집</div>
+    <div style="margin-bottom:12px"><label class="label">이름 *</label>
+      <input id="nd-label" value="${esc(node.label)}" placeholder="노드 이름"></div>
+    <div style="margin-bottom:12px"><label class="label">종류</label>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px">
+        ${DG_TYPES.map(t=>`
+          <label style="display:flex;align-items:center;gap:6px;padding:8px;border:1.5px solid var(--border);
+            border-radius:8px;cursor:pointer;font-size:12px;font-weight:600">
+            <input type="radio" name="nd-type" value="${t.id}" ${t.id===node.type?'checked':''} style="width:auto;border:none;padding:0">
+            ${t.icon} ${t.label}
+          </label>`).join('')}
+      </div>
+    </div>
+    <div style="margin-bottom:20px"><label class="label">부제 (선택)</label>
+      <input id="nd-sub" value="${esc(node.sub||'')}" placeholder="예: 주인공, 악역..."></div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" onclick="deleteNode('${id}');closeModal()">삭제</button>
+      <button class="btn btn-outline" onclick="closeModal()">취소</button>
+      <button class="btn btn-gold" onclick="editNode('${id}')">저장</button>
+    </div>`);
+}
+
+function editNode(id) {
+  const label = document.getElementById('nd-label').value.trim();
+  if (!label) { toast('이름을 입력해주세요.'); return; }
+  const dg = getActiveDiagram();
+  const node = (dg?.nodes||[]).find(n=>n.id===id);
+  if (!node) return;
+  node.label = label;
+  node.type = document.querySelector('input[name="nd-type"]:checked')?.value || node.type;
+  node.sub = document.getElementById('nd-sub').value.trim();
+  saveDiagram(); closeModal(); renderDiagramCanvas();
+}
+
+function showConnectLabelModal(fromId, toId) {
+  showModal(`
+    <div class="modal-title">연결 관계 입력</div>
+    <div style="margin-bottom:20px"><label class="label">관계/설명 (선택)</label>
+      <input id="edge-label" placeholder="예: 연인, 라이벌, 스승, 원인→결과"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">취소</button>
+      <button class="btn btn-gold" onclick="addEdge('${fromId}','${toId}')">연결</button>
+    </div>`);
+  setTimeout(()=>document.getElementById('edge-label')?.focus(),100);
+}
+
+function addEdge(fromId, toId) {
+  const label = document.getElementById('edge-label')?.value.trim()||'';
+  const dg = getActiveDiagram();
+  if (!dg.edges) dg.edges = [];
+  dg.edges.push({from:fromId, to:toId, label});
+  saveDiagram(); closeModal(); renderDiagramCanvas();
+  toast('연결됐어요!');
+}
+
+function showNodeContextMenu(id, x, y) {
+  const existing = document.getElementById('node-ctx-menu');
+  if (existing) existing.remove();
+  const menu = document.createElement('div');
+  menu.id = 'node-ctx-menu';
+  menu.style.cssText = `position:fixed;left:${x}px;top:${y}px;background:var(--white);
+    border:1px solid var(--border);border-radius:10px;padding:6px;
+    box-shadow:0 4px 20px var(--shadow);z-index:9000;min-width:130px`;
+  menu.innerHTML = `
+    <button onclick="showEditNodeModal('${id}');document.getElementById('node-ctx-menu')?.remove()"
+      style="display:block;width:100%;text-align:left;padding:8px 12px;border:none;background:none;cursor:pointer;border-radius:6px;font-size:13px;font-family:'Noto Sans KR',sans-serif">✏️ 편집</button>
+    <button onclick="dgState.connecting=true;dgState.connectFrom='${id}';document.getElementById('node-ctx-menu')?.remove();toast('연결할 노드를 탭하세요')"
+      style="display:block;width:100%;text-align:left;padding:8px 12px;border:none;background:none;cursor:pointer;border-radius:6px;font-size:13px;font-family:'Noto Sans KR',sans-serif">🔗 연결하기</button>
+    <hr style="border:none;border-top:1px solid var(--border);margin:4px 0">
+    <button onclick="deleteNode('${id}');document.getElementById('node-ctx-menu')?.remove()"
+      style="display:block;width:100%;text-align:left;padding:8px 12px;border:none;background:none;cursor:pointer;border-radius:6px;font-size:13px;color:var(--rust);font-family:'Noto Sans KR',sans-serif">🗑️ 삭제</button>
+  `;
+  document.body.appendChild(menu);
+  setTimeout(()=>document.addEventListener('click',()=>menu.remove(),{once:true}),50);
+}
+
 // ═══════════════════════════════════════════════════════════════
 // MODAL SYSTEM
 // ═══════════════════════════════════════════════════════════════
@@ -1272,7 +1771,14 @@ function closeModal() {
   const m = document.getElementById('modal-bg');
   if (m) m.remove();
 }
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeModal(); return; }
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+    e.preventDefault();
+    const p = getProject();
+    if (p) { exportData(); } else { toast('저장할 작품을 먼저 열어주세요.'); }
+  }
+});
 
 // ═══════════════════════════════════════════════════════════════
 // INIT
@@ -1288,6 +1794,118 @@ if ('serviceWorker' in navigator) {
       .catch(e => console.log('SW failed', e));
   });
 }
+
+// ═══════════════════════════════════════════════════════════════
+// 종료 전 백업 알림
+// ═══════════════════════════════════════════════════════════════
+const BACKUP_KEY = 'wnstudio_last_backup';
+
+function getLastBackupTime() {
+  return localStorage.getItem(BACKUP_KEY) ? new Date(localStorage.getItem(BACKUP_KEY)) : null;
+}
+function setLastBackupTime() {
+  localStorage.setItem(BACKUP_KEY, new Date().toISOString());
+}
+
+// 백업 알림 배너 표시
+function showBackupBanner() {
+  if (document.getElementById('backup-banner')) return;
+  const last = getLastBackupTime();
+  const lastText = last
+    ? `마지막 백업: ${last.toLocaleDateString('ko-KR')} ${last.toLocaleTimeString('ko-KR', {hour:'2-digit',minute:'2-digit'})}`
+    : '아직 백업한 적 없어요';
+
+  const banner = document.createElement('div');
+  banner.id = 'backup-banner';
+  banner.style.cssText = `
+    position:fixed;bottom:0;left:0;right:0;z-index:9000;
+    background:#18120a;color:#fff;padding:14px 20px;
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    box-shadow:0 -4px 20px rgba(0,0,0,.3);
+    animation:slideUpBanner .3s ease;
+  `;
+  banner.innerHTML = `
+    <style>@keyframes slideUpBanner{from{transform:translateY(100%)}to{transform:translateY(0)}}</style>
+    <span style="font-size:18px">💾</span>
+    <div style="flex:1;min-width:200px">
+      <div style="font-weight:700;font-size:14px;margin-bottom:2px">앱을 닫기 전에 백업하시겠어요?</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.6)">${lastText}</div>
+    </div>
+    <button onclick="backupAllAndClose()" style="
+      background:var(--gold);color:#fff;border:none;border-radius:8px;
+      padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;
+      font-family:'Noto Sans KR',sans-serif;white-space:nowrap;
+    ">전체 백업 후 닫기</button>
+    <button onclick="exportData();setLastBackupTime();dismissBackupBanner();" style="
+      background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:8px;
+      padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;
+      font-family:'Noto Sans KR',sans-serif;white-space:nowrap;
+    ">현재 작품만 백업</button>
+    <button onclick="dismissBackupBanner()" style="
+      background:transparent;color:rgba(255,255,255,.5);border:none;
+      border-radius:8px;padding:9px 12px;font-size:13px;cursor:pointer;
+      font-family:'Noto Sans KR',sans-serif;white-space:nowrap;
+    ">나중에</button>
+  `;
+  document.body.appendChild(banner);
+}
+
+function dismissBackupBanner() {
+  const b = document.getElementById('backup-banner');
+  if (b) b.remove();
+}
+
+// 전체 작품 백업 (모든 작품을 하나의 JSON으로)
+function backupAllAndClose() {
+  const blob = new Blob([JSON.stringify(state.projects, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '웹소설스튜디오_전체백업_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  setLastBackupTime();
+  dismissBackupBanner();
+  toast('전체 백업 완료! 📁');
+}
+
+// exportData도 백업 시간 기록하도록 오버라이드
+const _origExport = exportData;
+exportData = function() {
+  _origExport();
+  setLastBackupTime();
+};
+
+// 앱 종료/새로고침 전 감지
+window.addEventListener('beforeunload', (e) => {
+  // 작품이 있을 때만 알림
+  if (state.projects.length === 0) return;
+  const last = getLastBackupTime();
+  const now = new Date();
+  const hoursSince = last ? (now - last) / 1000 / 60 / 60 : 999;
+  // 마지막 백업이 1시간 이상 됐으면 브라우저 기본 종료 경고 표시
+  if (hoursSince > 1) {
+    e.preventDefault();
+    e.returnValue = '';
+  }
+});
+
+// 페이지 숨김(탭 전환, 홈 버튼 등) 감지 → 배너 표시
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    if (state.projects.length === 0) return;
+    const last = getLastBackupTime();
+    const now = new Date();
+    const hoursSince = last ? (now - last) / 1000 / 60 / 60 : 999;
+    if (hoursSince > 1) {
+      // 다시 돌아왔을 때 배너 표시
+      document.addEventListener('visibilitychange', function showOnReturn() {
+        if (document.visibilityState === 'visible') {
+          showBackupBanner();
+          document.removeEventListener('visibilitychange', showOnReturn);
+        }
+      });
+    }
+  }
+});
 </script>
 </body>
 </html>
