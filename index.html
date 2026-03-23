@@ -1435,45 +1435,112 @@ function renderDiagramCanvas() {
   });
 
   // 엣지(연결선) 렌더
-  const wrap = document.getElementById('dg-wrap');
-  const wrapRect = wrap ? wrap.getBoundingClientRect() : {width:800,height:600};
-  svgEdges.innerHTML = '<defs><marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="var(--teal)"/></marker></defs>';
+  svgEdges.innerHTML = '';
+  // defs: 화살표 마커 (색상별)
+  const colors = ['#235f62','#c4922a','#b5451b','#3949ab','#7b1fa2','#555555'];
+  let defs = '<defs>';
+  colors.forEach(c => {
+    const cid = c.replace('#','');
+    defs += `<marker id="arr-${cid}" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="${c}"/></marker>`;
+    defs += `<marker id="arr-start-${cid}" markerWidth="10" markerHeight="7" refX="1" refY="3.5" orient="auto-start-reverse"><polygon points="0 0,10 3.5,0 7" fill="${c}"/></marker>`;
+  });
+  defs += '</defs>';
+  svgEdges.innerHTML = defs;
+
   (dg.edges||[]).forEach((edge,ei) => {
     const from = (dg.nodes||[]).find(n=>n.id===edge.from);
-    const to = (dg.nodes||[]).find(n=>n.id===edge.to);
+    const to   = (dg.nodes||[]).find(n=>n.id===edge.to);
     if (!from||!to) return;
-    const fx = from.x+dgState.pan.x+90, fy = from.y+dgState.pan.y+30;
-    const tx = to.x+dgState.pan.x+90, ty = to.y+dgState.pan.y+30;
+
+    // 노드 중심 좌표
+    const fx = from.x+dgState.pan.x+90, fy = from.y+dgState.pan.y+38;
+    const tx = to.x+dgState.pan.x+90,   ty = to.y+dgState.pan.y+38;
+    const mx = (fx+tx)/2, my = (fy+ty)/2;
+    const color = edge.color||'#235f62';
+    const cid = color.replace('#','');
+    const dir = edge.dir||'forward';
+    const style = edge.style||'solid';
+
     const g = document.createElementNS('http://www.w3.org/2000/svg','g');
-    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
-    line.setAttribute('x1',fx); line.setAttribute('y1',fy);
-    line.setAttribute('x2',tx); line.setAttribute('y2',ty);
-    line.setAttribute('stroke','var(--teal)'); line.setAttribute('stroke-width','2');
-    line.setAttribute('marker-end','url(#arrow)');
-    g.appendChild(line);
-    if (edge.label) {
-      const text = document.createElementNS('http://www.w3.org/2000/svg','text');
-      text.setAttribute('x',(fx+tx)/2); text.setAttribute('y',(fy+ty)/2-6);
-      text.setAttribute('text-anchor','middle'); text.setAttribute('font-size','11');
-      text.setAttribute('fill','var(--teal)'); text.setAttribute('font-family','Noto Sans KR,sans-serif');
-      text.setAttribute('font-weight','600');
-      const bg = document.createElementNS('http://www.w3.org/2000/svg','rect');
-      bg.setAttribute('x',(fx+tx)/2-text.textContent.length*3-16);
-      bg.setAttribute('y',(fy+ty)/2-20); bg.setAttribute('width',Math.max(40,edge.label.length*10+16));
-      bg.setAttribute('height',16); bg.setAttribute('rx',4); bg.setAttribute('fill','#e8f4f4');
-      g.appendChild(bg);
-      text.textContent = edge.label;
-      g.appendChild(text);
+    g.style.pointerEvents = 'all';
+    g.style.cursor = 'default';
+    g.dataset.edgeIdx = ei;
+
+    if (style === 'cut') {
+      // 절단선: 두 세그먼트 + X 표시
+      const qx = (fx+mx)/2, qy = (fy+my)/2;
+      const wx = (mx+tx)/2, wy = (my+ty)/2;
+      [[fx,fy,qx,qy],[wx,wy,tx,ty]].forEach(([x1,y1,x2,y2],si) => {
+        const seg = document.createElementNS('http://www.w3.org/2000/svg','line');
+        seg.setAttribute('x1',x1); seg.setAttribute('y1',y1);
+        seg.setAttribute('x2',x2); seg.setAttribute('y2',y2);
+        seg.setAttribute('stroke',color); seg.setAttribute('stroke-width','2.5');
+        if (si===1 && dir==='forward') seg.setAttribute('marker-end',`url(#arr-${cid})`);
+        if (si===0 && dir==='both') seg.setAttribute('marker-start',`url(#arr-start-${cid})`);
+        if (si===1 && dir==='both') seg.setAttribute('marker-end',`url(#arr-${cid})`);
+        g.appendChild(seg);
+      });
+      // X 기호
+      const xSize = 8;
+      ['M -'+xSize+' -'+xSize+' L '+xSize+' '+xSize,'M '+xSize+' -'+xSize+' L -'+xSize+' '+xSize].forEach(d => {
+        const xLine = document.createElementNS('http://www.w3.org/2000/svg','path');
+        xLine.setAttribute('d', `M ${mx+parseFloat(d.split(' ')[1])} ${my+parseFloat(d.split(' ')[2])} L ${mx+parseFloat(d.split(' ')[4])} ${my+parseFloat(d.split(' ')[5])}`);
+        xLine.setAttribute('stroke',color); xLine.setAttribute('stroke-width','2.5');
+        xLine.setAttribute('stroke-linecap','round');
+        g.appendChild(xLine);
+      });
+      // 간단하게 X
+      const xt = document.createElementNS('http://www.w3.org/2000/svg','text');
+      xt.setAttribute('x',mx); xt.setAttribute('y',my+5);
+      xt.setAttribute('text-anchor','middle'); xt.setAttribute('font-size','16');
+      xt.setAttribute('fill',color); xt.setAttribute('font-weight','bold');
+      xt.textContent = '✕';
+      g.appendChild(xt);
+    } else {
+      const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('x1',fx); line.setAttribute('y1',fy);
+      line.setAttribute('x2',tx); line.setAttribute('y2',ty);
+      line.setAttribute('stroke',color); line.setAttribute('stroke-width','2.5');
+      if (style==='dashed') line.setAttribute('stroke-dasharray','8,5');
+      if (dir==='forward'||dir==='both') line.setAttribute('marker-end',`url(#arr-${cid})`);
+      if (dir==='both') line.setAttribute('marker-start',`url(#arr-start-${cid})`);
+      g.appendChild(line);
     }
-    // 삭제 버튼 (가운데)
-    const delBtn = document.createElementNS('http://www.w3.org/2000/svg','text');
-    delBtn.setAttribute('x',(fx+tx)/2+2); delBtn.setAttribute('y',(fy+ty)/2+18);
-    delBtn.setAttribute('text-anchor','middle'); delBtn.setAttribute('font-size','14');
-    delBtn.setAttribute('fill','var(--rust)'); delBtn.setAttribute('cursor','pointer');
-    delBtn.setAttribute('style','pointer-events:all');
-    delBtn.textContent='✕';
-    delBtn.onclick=()=>deleteEdge(ei);
-    g.appendChild(delBtn);
+
+    // 투명 히트 영역 (터치 쉽게)
+    const hit = document.createElementNS('http://www.w3.org/2000/svg','line');
+    hit.setAttribute('x1',fx); hit.setAttribute('y1',fy);
+    hit.setAttribute('x2',tx); hit.setAttribute('y2',ty);
+    hit.setAttribute('stroke','transparent'); hit.setAttribute('stroke-width','20');
+    g.insertBefore(hit, g.firstChild);
+
+    // 라벨 배경 + 텍스트 (정중앙)
+    if (edge.label) {
+      const labelW = Math.max(50, edge.label.length*10+20);
+      const bg = document.createElementNS('http://www.w3.org/2000/svg','rect');
+      bg.setAttribute('x', mx - labelW/2);
+      bg.setAttribute('y', my - 12);
+      bg.setAttribute('width', labelW);
+      bg.setAttribute('height', 20);
+      bg.setAttribute('rx', 10);
+      bg.setAttribute('fill', '#fff');
+      bg.setAttribute('stroke', color);
+      bg.setAttribute('stroke-width', '1.5');
+      g.appendChild(bg);
+      const txt = document.createElementNS('http://www.w3.org/2000/svg','text');
+      txt.setAttribute('x', mx);
+      txt.setAttribute('y', my+4);
+      txt.setAttribute('text-anchor','middle');
+      txt.setAttribute('font-size','11');
+      txt.setAttribute('fill', color);
+      txt.setAttribute('font-family','Noto Sans KR,sans-serif');
+      txt.setAttribute('font-weight','700');
+      txt.textContent = edge.label;
+      g.appendChild(txt);
+    }
+
+    // 라벨만 정중앙에 표시 (버튼 없음 — 롱프레스로 편집)
+
     svgEdges.appendChild(g);
   });
 }
@@ -1586,6 +1653,41 @@ function setupDiagramEvents() {
     const nodeEl = e.target.closest('.dg-node');
     if (nodeEl) showNodeContextMenu(nodeEl.dataset.id, e.clientX, e.clientY);
   });
+
+  // SVG 연결선 롱프레스 (1.5초) → 편집
+  const svgEl = document.getElementById('diagram-svg');
+  if (svgEl) {
+    let edgeLongTimer = null;
+    let edgeTouchMoved = false;
+
+    svgEl.addEventListener('touchstart', e => {
+      edgeTouchMoved = false;
+      // g 요소 찾기 (연결선 그룹)
+      const gEl = e.target.closest('g[data-edge-idx]');
+      if (!gEl) return;
+      const idx = parseInt(gEl.dataset.edgeIdx);
+      edgeLongTimer = setTimeout(() => {
+        if (!edgeTouchMoved) {
+          showEditEdgeModal(idx);
+        }
+      }, 1500);
+    }, {passive:true});
+
+    svgEl.addEventListener('touchmove', () => {
+      edgeTouchMoved = true;
+      clearTimeout(edgeLongTimer);
+    }, {passive:true});
+
+    svgEl.addEventListener('touchend', () => {
+      clearTimeout(edgeLongTimer);
+    }, {passive:true});
+
+    // PC 더블클릭 → 편집
+    svgEl.addEventListener('dblclick', e => {
+      const gEl = e.target.closest('g[data-edge-idx]');
+      if (gEl) showEditEdgeModal(parseInt(gEl.dataset.edgeIdx));
+    });
+  }
 }
 
 function renderEdgesOnly() {
@@ -1593,20 +1695,8 @@ function renderEdgesOnly() {
   if (!dg) return;
   const svgEdges = document.getElementById('svg-edges');
   if (!svgEdges) return;
-  svgEdges.innerHTML = '<defs><marker id="arrow" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="var(--teal)"/></marker></defs>';
-  (dg.edges||[]).forEach((edge,ei) => {
-    const from = (dg.nodes||[]).find(n=>n.id===edge.from);
-    const to = (dg.nodes||[]).find(n=>n.id===edge.to);
-    if (!from||!to) return;
-    const fx=from.x+dgState.pan.x+90, fy=from.y+dgState.pan.y+30;
-    const tx=to.x+dgState.pan.x+90, ty=to.y+dgState.pan.y+30;
-    const line = document.createElementNS('http://www.w3.org/2000/svg','line');
-    line.setAttribute('x1',fx);line.setAttribute('y1',fy);
-    line.setAttribute('x2',tx);line.setAttribute('y2',ty);
-    line.setAttribute('stroke','var(--teal)');line.setAttribute('stroke-width','2');
-    line.setAttribute('marker-end','url(#arrow)');
-    svgEdges.appendChild(line);
-  });
+  // 드래그 중엔 전체 재렌더 (간단하게)
+  renderDiagramCanvas();
 }
 
 function resetView() { dgState.pan={x:0,y:0}; dgState.zoom=1; renderDiagramCanvas(); }
@@ -1629,6 +1719,67 @@ function deleteEdge(idx) {
   if (!dg) return;
   dg.edges.splice(idx,1);
   saveDiagram(); renderDiagramCanvas();
+}
+
+function showEditEdgeModal(idx) {
+  const dg = getActiveDiagram();
+  const edge = dg?.edges?.[idx];
+  if (!edge) return;
+  showModal(`
+    <div class="modal-title">연결선 편집</div>
+    <div style="margin-bottom:14px">
+      <label class="label">설명</label>
+      <input id="ee-label" value="${esc(edge.label||'')}" placeholder="예: 연인, 라이벌">
+    </div>
+    <div style="margin-bottom:14px">
+      <label class="label">화살표 방향</label>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px">
+        ${[{v:'forward',l:'단방향 →'},{v:'both',l:'양방향 ↔'},{v:'none',l:'방향 없음 ─'}].map(t=>`
+          <label style="display:flex;align-items:center;gap:6px;padding:9px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;font-weight:600">
+            <input type="radio" name="ee-dir" value="${t.v}" ${(edge.dir||'forward')===t.v?'checked':''} style="width:auto;border:none;padding:0">
+            ${t.l}
+          </label>`).join('')}
+      </div>
+    </div>
+    <div style="margin-bottom:14px">
+      <label class="label">선 스타일</label>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px">
+        ${[{v:'solid',l:'실선 ─────'},{v:'dashed',l:'점선 ╌╌╌╌╌'},{v:'cut',l:'절단 ─ ✕ ─'}].map(t=>`
+          <label style="display:flex;align-items:center;gap:6px;padding:9px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;font-weight:600">
+            <input type="radio" name="ee-style" value="${t.v}" ${(edge.style||'solid')===t.v?'checked':''} style="width:auto;border:none;padding:0">
+            ${t.l}
+          </label>`).join('')}
+      </div>
+    </div>
+    <div style="margin-bottom:20px">
+      <label class="label">선 색상</label>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px">
+        ${[{v:'#235f62',l:'초록'},{v:'#c4922a',l:'금색'},{v:'#b5451b',l:'빨강'},{v:'#3949ab',l:'파랑'},{v:'#7b1fa2',l:'보라'},{v:'#555555',l:'회색'}].map(c=>`
+          <label style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10px;color:var(--muted)">
+            <input type="radio" name="ee-color" value="${c.v}" ${(edge.color||'#235f62')===c.v?'checked':''} style="display:none">
+            <div style="width:28px;height:28px;border-radius:50%;background:${c.v};border:3px solid ${(edge.color||'#235f62')===c.v?'var(--gold)':'transparent'};transition:border-color .15s"
+              onclick="document.querySelectorAll('[name=ee-color]').forEach(r=>r.parentNode.querySelector('div').style.borderColor='transparent');this.style.borderColor='var(--gold)'">
+            </div>
+            ${c.l}
+          </label>`).join('')}
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" onclick="deleteEdge(${idx});closeModal()">삭제</button>
+      <button class="btn btn-outline" onclick="closeModal()">취소</button>
+      <button class="btn btn-gold" onclick="saveEdge(${idx})">저장</button>
+    </div>`);
+}
+
+function saveEdge(idx) {
+  const dg = getActiveDiagram();
+  const edge = dg?.edges?.[idx];
+  if (!edge) return;
+  edge.label = document.getElementById('ee-label').value.trim();
+  edge.dir   = document.querySelector('input[name="ee-dir"]:checked')?.value||'forward';
+  edge.style = document.querySelector('input[name="ee-style"]:checked')?.value||'solid';
+  edge.color = document.querySelector('input[name="ee-color"]:checked')?.value||'#235f62';
+  saveDiagram(); closeModal(); renderDiagramCanvas();
 }
 
 function deleteNode(id) {
@@ -1757,9 +1908,59 @@ function editNode(id) {
 
 function showConnectLabelModal(fromId, toId) {
   showModal(`
-    <div class="modal-title">연결 관계 입력</div>
-    <div style="margin-bottom:20px"><label class="label">관계/설명 (선택)</label>
-      <input id="edge-label" placeholder="예: 연인, 라이벌, 스승, 원인→결과"></div>
+    <div class="modal-title">연결선 설정</div>
+    <div style="margin-bottom:14px">
+      <label class="label">설명 (선택)</label>
+      <input id="edge-label" placeholder="예: 연인, 라이벌, 스승, 원인→결과">
+    </div>
+    <div style="margin-bottom:14px">
+      <label class="label">화살표 방향</label>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px">
+        ${[
+          {v:'forward', label:'단방향 →'},
+          {v:'both',    label:'양방향 ↔'},
+          {v:'none',    label:'방향 없음 ─'},
+        ].map((t,i)=>`
+          <label style="display:flex;align-items:center;gap:6px;padding:9px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;font-weight:600">
+            <input type="radio" name="edge-dir" value="${t.v}" ${i===0?'checked':''} style="width:auto;border:none;padding:0">
+            ${t.label}
+          </label>`).join('')}
+      </div>
+    </div>
+    <div style="margin-bottom:14px">
+      <label class="label">선 스타일</label>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px">
+        ${[
+          {v:'solid',  label:'실선 ─────'},
+          {v:'dashed', label:'점선 ╌╌╌╌╌'},
+          {v:'cut',    label:'절단 ─ ✕ ─'},
+        ].map((t,i)=>`
+          <label style="display:flex;align-items:center;gap:6px;padding:9px;border:1.5px solid var(--border);border-radius:8px;cursor:pointer;font-size:12px;font-weight:600">
+            <input type="radio" name="edge-style" value="${t.v}" ${i===0?'checked':''} style="width:auto;border:none;padding:0">
+            ${t.label}
+          </label>`).join('')}
+      </div>
+    </div>
+    <div style="margin-bottom:20px">
+      <label class="label">선 색상</label>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px">
+        ${[
+          {v:'#235f62',label:'초록',bg:'#235f62'},
+          {v:'#c4922a',label:'금색',bg:'#c4922a'},
+          {v:'#b5451b',label:'빨강',bg:'#b5451b'},
+          {v:'#3949ab',label:'파랑',bg:'#3949ab'},
+          {v:'#7b1fa2',label:'보라',bg:'#7b1fa2'},
+          {v:'#555555',label:'회색',bg:'#555555'},
+        ].map((c,i)=>`
+          <label style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10px;color:var(--muted)">
+            <input type="radio" name="edge-color" value="${c.v}" ${i===0?'checked':''} style="display:none">
+            <div style="width:28px;height:28px;border-radius:50%;background:${c.bg};border:3px solid transparent;transition:border-color .15s"
+              onclick="document.querySelectorAll('[name=edge-color]').forEach(r=>r.parentNode.querySelector('div').style.borderColor='transparent');this.style.borderColor='var(--gold)'">
+            </div>
+            ${c.label}
+          </label>`).join('')}
+      </div>
+    </div>
     <div class="modal-footer">
       <button class="btn btn-outline" onclick="closeModal()">취소</button>
       <button class="btn btn-gold" onclick="addEdge('${fromId}','${toId}')">연결</button>
@@ -1769,9 +1970,12 @@ function showConnectLabelModal(fromId, toId) {
 
 function addEdge(fromId, toId) {
   const label = document.getElementById('edge-label')?.value.trim()||'';
+  const dir = document.querySelector('input[name="edge-dir"]:checked')?.value||'forward';
+  const style = document.querySelector('input[name="edge-style"]:checked')?.value||'solid';
+  const color = document.querySelector('input[name="edge-color"]:checked')?.value||'#235f62';
   const dg = getActiveDiagram();
   if (!dg.edges) dg.edges = [];
-  dg.edges.push({from:fromId, to:toId, label});
+  dg.edges.push({from:fromId, to:toId, label, dir, style, color});
   saveDiagram(); closeModal(); renderDiagramCanvas();
   toast('연결됐어요!');
 }
