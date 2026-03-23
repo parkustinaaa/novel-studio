@@ -1482,11 +1482,32 @@ function setupDiagramEvents() {
   const canvas = document.getElementById('diagram-canvas');
   if (!canvas) return;
 
-  // 노드 드래그
-  canvas.addEventListener('pointerdown', e => {
+  let tapTimer = null;
+  let tapCount = 0;
+  let tapTarget = null;
+
+  function getClientXY(e) {
+    if (e.touches && e.touches.length > 0) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+    if (e.changedTouches && e.changedTouches.length > 0) return { x: e.changedTouches[0].clientX, y: e.changedTouches[0].clientY };
+    return { x: e.clientX, y: e.clientY };
+  }
+
+  function onStart(e) {
     const nodeEl = e.target.closest('.dg-node');
     if (!nodeEl) { dgState.selectedNodeId=null; renderDiagramCanvas(); return; }
     const id = nodeEl.dataset.id;
+    const {x, y} = getClientXY(e);
+
+    // 더블탭 감지
+    tapCount++;
+    tapTarget = id;
+    if (tapCount === 1) {
+      tapTimer = setTimeout(() => { tapCount = 0; }, 350);
+    } else if (tapCount === 2) {
+      clearTimeout(tapTimer); tapCount = 0;
+      showEditNodeModal(id);
+      return;
+    }
 
     // 연결 모드
     if (dgState.connecting) {
@@ -1499,46 +1520,67 @@ function setupDiagramEvents() {
         dgState.connectFrom = null;
         toggleConnectMode(false);
       }
+      e.preventDefault();
       return;
     }
 
-    // 선택
+    // 드래그 시작
     dgState.selectedNodeId = id;
-    const rect = nodeEl.getBoundingClientRect();
-    const wrapRect = document.getElementById('dg-wrap').getBoundingClientRect();
     dgState.dragging = id;
-    dgState.dragOffset = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    const rect = nodeEl.getBoundingClientRect();
+    dgState.dragOffset = { x: x - rect.left, y: y - rect.top };
     nodeEl.style.boxShadow = '0 8px 24px rgba(0,0,0,.2)';
     nodeEl.style.zIndex = 100;
     e.preventDefault();
+  }
 
-    // 더블클릭 → 편집
-    nodeEl.addEventListener('dblclick', () => showEditNodeModal(id), {once:true});
-  });
-
-  canvas.addEventListener('pointermove', e => {
+  function onMove(e) {
     if (!dgState.dragging) return;
+    e.preventDefault();
     const dg = getActiveDiagram();
     const wrapRect = document.getElementById('dg-wrap').getBoundingClientRect();
     const node = (dg.nodes||[]).find(n=>n.id===dgState.dragging);
     if (!node) return;
-    node.x = e.clientX - wrapRect.left - dgState.dragOffset.x - dgState.pan.x;
-    node.y = e.clientY - wrapRect.top - dgState.dragOffset.y - dgState.pan.y;
+    const {x, y} = getClientXY(e);
+    node.x = x - wrapRect.left - dgState.dragOffset.x - dgState.pan.x;
+    node.y = y - wrapRect.top - dgState.dragOffset.y - dgState.pan.y;
     const el = document.getElementById('node-'+dgState.dragging);
     if (el) { el.style.left=(node.x+dgState.pan.x)+'px'; el.style.top=(node.y+dgState.pan.y)+'px'; }
     renderEdgesOnly();
-  });
+  }
 
-  canvas.addEventListener('pointerup', e => {
+  function onEnd(e) {
     if (dgState.dragging) {
       saveDiagram();
       const el = document.getElementById('node-'+dgState.dragging);
       if (el) { el.style.boxShadow=''; el.style.zIndex=''; }
       dgState.dragging = null;
     }
-  });
+  }
 
-  // 컨텍스트 메뉴 (우클릭/롱프레스 → 노드 메뉴)
+  // 터치 + 마우스 둘 다 지원
+  canvas.addEventListener('touchstart', onStart, {passive:false});
+  canvas.addEventListener('touchmove', onMove, {passive:false});
+  canvas.addEventListener('touchend', onEnd, {passive:false});
+  canvas.addEventListener('mousedown', onStart);
+  canvas.addEventListener('mousemove', onMove);
+  canvas.addEventListener('mouseup', onEnd);
+
+  // 롱프레스 → 컨텍스트 메뉴
+  let longPressTimer = null;
+  canvas.addEventListener('touchstart', e => {
+    const nodeEl = e.target.closest('.dg-node');
+    if (!nodeEl) return;
+    longPressTimer = setTimeout(() => {
+      const {x, y} = getClientXY(e);
+      showNodeContextMenu(nodeEl.dataset.id, x, y);
+      dgState.dragging = null;
+    }, 600);
+  }, {passive:true});
+  canvas.addEventListener('touchend', () => clearTimeout(longPressTimer), {passive:true});
+  canvas.addEventListener('touchmove', () => clearTimeout(longPressTimer), {passive:true});
+
+  // PC 우클릭
   canvas.addEventListener('contextmenu', e => {
     e.preventDefault();
     const nodeEl = e.target.closest('.dg-node');
