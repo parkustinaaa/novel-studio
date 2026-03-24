@@ -585,15 +585,40 @@ function navigate(tab) {
 }
 
 function toggleSidebar() {
-  const sb = document.getElementById('sidebar');
-  const ov = document.getElementById('sidebar-overlay');
-  const isOpen = sb.classList.contains('open');
-  if (isOpen) { sb.classList.remove('open'); ov.style.display = 'none'; }
-  else { sb.classList.add('open'); ov.style.display = 'block'; }
+  const sb  = document.getElementById('sidebar');
+  const ov  = document.getElementById('sidebar-overlay');
+  const btn = document.getElementById('menu-toggle');
+  const isMobile = window.innerWidth <= 768;
+
+  if (isMobile) {
+    // 모바일: open 클래스 토글
+    const isOpen = sb.classList.contains('open');
+    if (isOpen) {
+      sb.classList.remove('open');
+      ov.style.display = 'none';
+    } else {
+      sb.classList.add('open');
+      ov.style.display = 'block';
+    }
+  } else {
+    // PC/태블릿: sidebar 자체를 숨기거나 보이게
+    const isHidden = sb.style.display === 'none' || sb.classList.contains('hidden');
+    if (isHidden) {
+      sb.style.display = 'flex';
+      sb.classList.remove('hidden');
+      if (btn) { btn.style.opacity = '1'; }
+    } else {
+      sb.style.display = 'none';
+      sb.classList.add('hidden');
+      if (btn) { btn.style.opacity = '0.5'; }
+    }
+  }
 }
 function closeSidebar() {
-  document.getElementById('sidebar').classList.remove('open');
-  document.getElementById('sidebar-overlay').style.display = 'none';
+  if (window.innerWidth <= 768) {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebar-overlay').style.display = 'none';
+  }
 }
 
 function updateBadges() {
