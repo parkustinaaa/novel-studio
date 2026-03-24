@@ -23,6 +23,13 @@
   --muted:#7a6e5f; --border:#ddd3be; --shadow:rgba(24,18,10,.1);
   --sidebar:240px; --header:52px;
 }
+[data-theme="dark"]{
+  --ink:#e8e0d4; --paper:#1a1612; --cream:#231f1b; --white:#252017;
+  --gold:#e8bc5c; --gold2:#f5d080; --gold-light:#2a2310;
+  --teal:#3d9195; --teal2:#4aabb0; --teal-light:#0e2526;
+  --rust:#e06040; --rust-light:#2a1510;
+  --muted:#9a8e7f; --border:#3a342c; --shadow:rgba(0,0,0,.3);
+}
 html,body{height:100%;overflow:hidden;background:var(--paper);color:var(--ink);
   font-family:'Noto Sans KR',sans-serif;font-size:14px;-webkit-tap-highlight-color:transparent}
 ::-webkit-scrollbar{width:4px;height:4px}
@@ -358,6 +365,7 @@ button{cursor:pointer;font-family:'Noto Sans KR',sans-serif;border:none;border-r
     <span id="header-project"></span>
     <div id="header-spacer"></div>
     <div id="header-actions">
+      <button class="header-btn" onclick="toggleDarkMode()" id="btn-darkmode" title="다크모드 전환" style="font-size:16px;padding:5px 10px">🌙</button>
       <button class="header-btn" onclick="showExportModal()" id="btn-export" style="display:none">📤 내보내기</button>
       <button class="header-btn" onclick="document.getElementById('import-file').click()" id="btn-import" style="display:none">📂 불러오기</button>
       <button class="header-btn gold" onclick="showNewProjectModal()">＋ 새 작품</button>
@@ -3305,10 +3313,34 @@ function showSavedBanner(success=true) {
   }, success ? 1200 : 2000);
 }
 
+
+// ═══════════════════════════════════════════════════════════
+// 다크모드
+// ═══════════════════════════════════════════════════════════
+function initDarkMode() {
+  const saved = localStorage.getItem('wnstudio_darkmode');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const isDark = saved !== null ? saved === 'true' : prefersDark;
+  applyDarkMode(isDark);
+}
+
+function applyDarkMode(isDark) {
+  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+  const btn = document.getElementById('btn-darkmode');
+  if (btn) btn.textContent = isDark ? '☀️' : '🌙';
+  localStorage.setItem('wnstudio_darkmode', isDark);
+}
+
+function toggleDarkMode() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  applyDarkMode(!isDark);
+}
+
 // ═══════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════
 loadFromStorage();
+initDarkMode();
 renderHome();
 
 // PWA Service Worker 등록
