@@ -1329,10 +1329,12 @@ function renderChapters() {
           </div>`}
       </div>
       <div id="split-panel" class="hidden">
-        <div class="split-panel-tabs" id="split-tabs">
+        <div class="split-panel-tabs" id="split-tabs" style="overflow-x:auto;flex-wrap:nowrap">
           <button class="split-tab active" onclick="switchSplitTab('overview')">📋 개요</button>
           <button class="split-tab" onclick="switchSplitTab('characters')">👤 인물</button>
           <button class="split-tab" onclick="switchSplitTab('plot')">📐 플롯</button>
+          <button class="split-tab" onclick="switchSplitTab('world')">🌍 세계관</button>
+          <button class="split-tab" onclick="switchSplitTab('diagram')">🔗 다이어그램</button>
           <button class="split-tab" onclick="switchSplitTab('memo')">📝 메모</button>
         </div>
         <div class="split-panel-content" id="split-content"></div>
@@ -3284,7 +3286,8 @@ function toggleSplitPanel() {
 function switchSplitTab(tab) {
   splitTab = tab;
   document.querySelectorAll('.split-tab').forEach(b => {
-    b.classList.toggle('active', b.onclick?.toString().includes(tab));
+    const match = b.getAttribute('onclick')?.includes("'" + tab + "'");
+    b.classList.toggle('active', !!match);
   });
   renderSplitContent();
 }
@@ -3326,6 +3329,56 @@ function renderSplitContent() {
             <span style="color:var(--muted)">#${i+1}</span> ${esc(s.title)}
             ${s.summary ? `<div style="color:var(--muted);font-size:11px;margin-top:2px">${esc(s.summary)}</div>` : ''}
           </div>`).join('')}
+      </div>
+    `).join('');
+  } else if (splitTab === 'world') {
+    const worlds = p.worldSettings || [];
+    if (!worlds.length) { el.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px">세계관 설정이 없어요</div>'; return; }
+    // 카테고리별 그룹핑
+    const groups = {};
+    worlds.forEach(w => {
+      const cat = w.category || '기타';
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(w);
+    });
+    el.innerHTML = Object.entries(groups).map(([cat, items]) => `
+      <div style="margin-bottom:16px">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1px;margin-bottom:6px;text-transform:uppercase">${esc(cat)}</div>
+        ${items.map(w => `
+          <div style="padding:10px 12px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;background:var(--white)">
+            <div style="font-weight:700;font-size:13px;margin-bottom:4px">${esc(w.title)}</div>
+            <div style="font-size:12px;color:var(--muted);line-height:1.7;white-space:pre-wrap">${esc(w.content||'')}</div>
+          </div>`).join('')}
+      </div>
+    `).join('');
+  } else if (splitTab === 'diagram') {
+    const diagrams = p.diagrams || [];
+    if (!diagrams.length) { el.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px">다이어그램이 없어요</div>'; return; }
+    // 다이어그램 목록 + 노드/엣지 텍스트 요약
+    el.innerHTML = diagrams.map(dg => `
+      <div style="margin-bottom:16px;border:1px solid var(--border);border-radius:10px;overflow:hidden">
+        <div style="padding:8px 12px;background:var(--cream);font-weight:700;font-size:13px;color:var(--gold)">${esc(dg.title||'다이어그램')}</div>
+        <div style="padding:10px 12px">
+          ${(dg.nodes||[]).length === 0 ? '<div style="color:var(--muted);font-size:12px">노드 없음</div>' :
+            (dg.nodes||[]).map(n => `
+              <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px">
+                <span style="font-size:14px">${(DG_TYPES.find(t=>t.id===n.type)||DG_TYPES[0]).icon}</span>
+                <span style="font-weight:600">${esc(n.label)}</span>
+                ${n.sub ? `<span style="color:var(--muted)">${esc(n.sub)}</span>` : ''}
+              </div>`).join('')}
+          ${(dg.edges||[]).length > 0 ? `
+            <div style="margin-top:8px;font-size:11px;color:var(--muted);font-weight:700">연결 관계</div>
+            ${dg.edges.map(e => {
+              const fn = (dg.nodes||[]).find(n=>n.id===e.from);
+              const tn = (dg.nodes||[]).find(n=>n.id===e.to);
+              if (!fn||!tn) return '';
+              const arrow = e.dir==='both' ? '↔' : e.dir==='none' ? '—' : '→';
+              return `<div style="font-size:11px;padding:3px 0;color:var(--ink)">
+                ${esc(fn.label)} ${arrow} ${esc(tn.label)}
+                ${e.label ? `<span style="color:var(--muted)">(${esc(e.label)})</span>` : ''}
+              </div>`;
+            }).join('')}` : ''}
+        </div>
       </div>
     `).join('');
   } else if (splitTab === 'memo') {
