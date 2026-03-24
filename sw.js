@@ -1,4 +1,4 @@
-const CACHE = 'wnstudio-1774336824';
+const CACHE = 'wnstudio-1774337552';
 
 self.addEventListener('install', e => {
   e.waitUntil(
