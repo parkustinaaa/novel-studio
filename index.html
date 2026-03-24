@@ -349,7 +349,7 @@ button{cursor:pointer;font-family:'Noto Sans KR',sans-serif;border:none;border-r
     <span id="header-project"></span>
     <div id="header-spacer"></div>
     <div id="header-actions">
-      <button class="header-btn" onclick="exportData()" id="btn-export" style="display:none">💾 내보내기</button>
+      <button class="header-btn" onclick="showExportModal()" id="btn-export" style="display:none">📤 내보내기</button>
       <button class="header-btn" onclick="document.getElementById('import-file').click()" id="btn-import" style="display:none">📂 불러오기</button>
       <button class="header-btn gold" onclick="showNewProjectModal()">＋ 새 작품</button>
     </div>
@@ -691,11 +691,12 @@ function renderHome() {
 }
 
 function deleteProject(id) {
-  if (!confirm('작품을 삭제하시겠습니까?\n복구할 수 없습니다.')) return;
+  confirmDialog('이 작품을 삭제합니다. 복구할 수 없습니다.', () => {
   state.projects = state.projects.filter(p => p.id !== id);
   saveToStorage();
   renderHome();
   toast('작품이 삭제되었습니다.');
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -833,9 +834,10 @@ function renderCharacters() {
             <button class="btn-icon" onclick="showCharModal(${i})" title="수정">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             </button>
-            <button class="btn-icon" onclick="deleteChar(${i})" title="삭제" style="color:var(--rust)">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-            </button>
+            <button onclick="deleteChar(${i})" title="삭제"
+              style="width:34px;height:34px;border-radius:50%;background:rgba(181,69,27,.1);
+                border:none;cursor:pointer;color:var(--rust);font-size:16px;font-weight:700;
+                display:flex;align-items:center;justify-content:center">×</button>
           </div>
         </div>
       </div>`).join('');
@@ -895,9 +897,11 @@ function saveChar(idx) {
 }
 
 function deleteChar(idx) {
-  if (!confirm('삭제하시겠습니까?')) return;
-  getProject().characters.splice(idx, 1);
-  autoSave(); renderCharacters();
+  confirmDialog('이 캐릭터를 삭제합니다.', () => {
+    getProject().characters.splice(idx, 1);
+    autoSave(); renderCharacters();
+    toast('캐릭터를 삭제했어요.');
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -957,6 +961,7 @@ function addRelation() {
 function deleteRelation(i) {
   getProject().relations.splice(i,1);
   autoSave(); renderRelations();
+  toast('관계를 삭제했어요.');
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -988,9 +993,10 @@ function renderWorld() {
                 <button class="btn-icon" onclick="showWorldModal(${idx})">
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                 </button>
-                <button class="btn-icon" onclick="deleteWorld(${idx})" style="color:var(--rust)">
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                </button>
+                <button onclick="deleteWorld(${idx})" title="삭제"
+                  style="width:30px;height:30px;border-radius:50%;background:rgba(181,69,27,.1);
+                    border:none;cursor:pointer;color:var(--rust);font-size:15px;font-weight:700;
+                    display:flex;align-items:center;justify-content:center">×</button>
               </div>
             </div>
           </div>`;
@@ -1044,9 +1050,11 @@ function saveWorld(idx) {
   autoSave(); closeModal(); renderWorld();
 }
 function deleteWorld(idx) {
-  if (!confirm('삭제하시겠습니까?')) return;
-  getProject().worldSettings.splice(idx,1);
-  autoSave(); renderWorld();
+  confirmDialog('이 세계관 설정을 삭제합니다.', () => {
+    getProject().worldSettings.splice(idx,1);
+    autoSave(); renderWorld();
+    toast('설정을 삭제했어요.');
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1058,18 +1066,19 @@ function renderPlot() {
 
   const cols = arcs.map((a, ai) => {
     const scenes = (a.scenes || []).map((s, si) => `
-      <div class="scene-card" onclick="showSceneModal(${ai},${si})">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px">
-          <div>
-            <span class="font-display" style="color:var(--gold);font-size:11px">#${si+1}</span>
-            <div class="scene-card-title">${esc(s.title)}</div>
-            <span class="scene-card-type">${esc(s.type||'')}</span>
-            ${s.summary?`<div style="color:var(--muted);margin-top:4px;font-size:11px;line-height:1.5">${esc(s.summary)}</div>`:''}
-          </div>
-          <button class="btn-icon" onclick="event.stopPropagation();deleteScene(${ai},${si})" style="color:var(--rust);padding:2px">
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
+      <div style="position:relative;margin-bottom:8px">
+        <div class="scene-card" style="margin-bottom:0" onclick="showSceneModal(${ai},${si})">
+          <span class="font-display" style="color:var(--gold);font-size:11px">#${si+1}</span>
+          <div class="scene-card-title">${esc(s.title)}</div>
+          <span class="scene-card-type">${esc(s.type||'')}</span>
+          ${s.summary?`<div style="color:var(--muted);margin-top:4px;font-size:11px;line-height:1.5">${esc(s.summary)}</div>`:''}
         </div>
+        <button
+          style="position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;
+            background:rgba(181,69,27,0.12);border:none;cursor:pointer;
+            display:flex;align-items:center;justify-content:center;z-index:10;
+            color:var(--rust);font-size:13px;font-weight:700;line-height:1"
+          onclick="deleteScene(${ai},${si})">×</button>
       </div>`).join('');
 
     return `
@@ -1132,9 +1141,11 @@ function saveArc(idx) {
   autoSave(); closeModal(); renderPlot();
 }
 function deleteArc(idx) {
-  if (!confirm('아크와 모든 장면을 삭제하시겠습니까?')) return;
-  getProject().arcs.splice(idx,1);
-  autoSave(); renderPlot();
+  confirmDialog('이 아크와 모든 장면을 삭제합니다.', () => {
+    getProject().arcs.splice(idx,1);
+    autoSave(); renderPlot();
+    toast('아크를 삭제했어요.');
+  });
 }
 
 function showSceneModal(arcIdx, sceneIdx) {
@@ -1165,9 +1176,11 @@ function saveScene(arcIdx, sceneIdx) {
   autoSave(); closeModal(); renderPlot();
 }
 function deleteScene(arcIdx, sceneIdx) {
-  if (!confirm('삭제하시겠습니까?')) return;
-  getProject().arcs[arcIdx].scenes.splice(sceneIdx,1);
-  autoSave(); renderPlot();
+  confirmDialog('이 장면을 삭제합니다.', () => {
+    getProject().arcs[arcIdx].scenes.splice(sceneIdx,1);
+    autoSave(); renderPlot();
+    toast('장면을 삭제했어요.');
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1227,6 +1240,7 @@ function renderEditorContent(ch) {
       <button class="btn btn-outline btn-sm" id="sym-toggle-btn" onclick="toggleSymbolPalette()" style="font-size:13px">
         ✦ 기호
       </button>
+      <button class="btn btn-outline btn-sm" onclick="showChExportMenu('${ch.id}')" style="font-size:11px">📤 내보내기</button>
       <button class="btn btn-outline btn-sm" onclick="deleteChapter('${ch.id}')" style="color:var(--rust);border-color:rgba(181,69,27,.25)">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
         삭제
@@ -1292,11 +1306,12 @@ function updateChapter(id, key, val) {
 }
 
 function deleteChapter(id) {
-  if (!confirm('이 화를 삭제하시겠습니까?')) return;
+  confirmDialog('이 화를 삭제합니다.', () => {
   const p = getProject();
   p.chapters = p.chapters.filter(c => c.id !== id);
   if (activeChapterId === id) activeChapterId = p.chapters[0]?.id || null;
   autoSave(); renderChapters();
+  });
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -2129,12 +2144,14 @@ function saveEdge(idx) {
 }
 
 function deleteNode(id) {
+  confirmDialog('이 노드를 삭제합니다.', () => {
   const dg = getActiveDiagram();
   if (!dg) return;
   dg.nodes = (dg.nodes||[]).filter(n=>n.id!==id);
   dg.edges = (dg.edges||[]).filter(e=>e.from!==id&&e.to!==id);
   dgState.selectedNodeId=null;
   saveDiagram(); renderDiagramCanvas();
+  });
 }
 
 // ── 모달들 ──
@@ -2165,11 +2182,12 @@ function createDiagram() {
 }
 
 function deleteActiveDiagram() {
-  if (!confirm('이 다이어그램을 삭제하시겠습니까?')) return;
-  const p = getProject();
-  p.diagrams = (p.diagrams||[]).filter(d=>d.id!==dgState.activeDiagramId);
-  dgState.activeDiagramId = p.diagrams[0]?.id || null;
-  saveDiagram(); renderDiagram();
+  confirmDialog('이 다이어그램을 삭제합니다.', () => {
+    const p = getProject();
+    p.diagrams = (p.diagrams||[]).filter(d=>d.id!==dgState.activeDiagramId);
+    dgState.activeDiagramId = p.diagrams[0]?.id || null;
+    saveDiagram(); renderDiagram();
+  });
 }
 
 function showAddNodeModal() {
@@ -2474,9 +2492,11 @@ function updateMemo(i, key, val) {
 }
 
 function deleteMemo(i) {
-  if (!confirm('메모를 삭제하시겠습니까?')) return;
-  getProject().memos.splice(i, 1);
-  saveMemos(); renderMemo();
+  confirmDialog('이 메모를 삭제합니다.', () => {
+    getProject().memos.splice(i, 1);
+    saveMemos(); renderMemo();
+    toast('메모를 삭제했어요.');
+  });
 }
 
 function showMemoColorPicker(i, dotEl) {
@@ -2863,6 +2883,237 @@ function updateMsPreview() {
       <div class="ms-page">${esc(preview)}</div>
       ${text.length > 500 ? `<div style="text-align:center;padding:10px;font-size:12px;color:var(--muted);background:#fafafa;border-top:1px solid #eee">미리보기는 500자까지 표시됩니다</div>` : ''}
     </div>`;
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// 내보내기 기능
+// ═══════════════════════════════════════════════════════════
+
+// 클립보드 복사 (화 선택 or 전체)
+function copyToClipboard(chId) {
+  const p = getProject();
+  let text = '';
+  if (chId) {
+    const ch = (p.chapters||[]).find(c => c.id === chId);
+    if (!ch) return;
+    text = ch.title + '\n\n' + (ch.content||'');
+  } else {
+    text = (p.chapters||[]).map(c => c.title + '\n\n' + (c.content||'')).join('\n\n' + '─'.repeat(20) + '\n\n');
+  }
+  navigator.clipboard.writeText(text).then(() => {
+    toast('클립보드에 복사됐어요! 📋');
+  }).catch(() => {
+    // 폴백: textarea 방식
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    toast('클립보드에 복사됐어요! 📋');
+  });
+}
+
+// TXT 저장
+function exportTxt(chId) {
+  const p = getProject();
+  let text = '', filename = '';
+  if (chId) {
+    const ch = (p.chapters||[]).find(c => c.id === chId);
+    if (!ch) return;
+    text = ch.title + '\n\n' + (ch.content||'');
+    filename = (p.title||'작품') + '_' + ch.title + '.txt';
+  } else {
+    text = (p.chapters||[]).map(c => c.title + '\n\n' + (c.content||'')).join('\n\n' + '─'.repeat(30) + '\n\n');
+    filename = (p.title||'작품') + '_전체.txt';
+  }
+  const blob = new Blob([text], {type: 'text/plain;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  toast('TXT 파일이 저장됐어요! 📄');
+}
+
+// DOCX 저장 (HTML → Word 변환 방식)
+function exportDocx(chId) {
+  const p = getProject();
+  let chapters = [], filename = '';
+  if (chId) {
+    const ch = (p.chapters||[]).find(c => c.id === chId);
+    if (!ch) return;
+    chapters = [ch];
+    filename = (p.title||'작품') + '_' + ch.title + '.docx';
+  } else {
+    chapters = p.chapters || [];
+    filename = (p.title||'작품') + '_전체.docx';
+  }
+
+  // Word XML 생성
+  const paragraphs = chapters.map(ch => {
+    const lines = (ch.content||'').split('\n');
+    const titleXml = `<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>${escXml(ch.title)}</w:t></w:r></w:p>`;
+    const contentXml = lines.map(line =>
+      `<w:p><w:r><w:rPr><w:sz w:val="28"/><w:szCs w:val="28"/></w:rPr><w:t xml:space="preserve">${escXml(line)}</w:t></w:r></w:p>`
+    ).join('');
+    return titleXml + contentXml;
+  }).join('<w:p><w:r><w:t></w:t></w:r></w:p>');
+
+  const docXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:p><w:pPr><w:jc w:val="center"/></w:pPr>
+      <w:r><w:rPr><w:b/><w:sz w:val="36"/></w:rPr><w:t>${escXml(p.title||'제목 없음')}</w:t></w:r>
+    </w:p>
+    <w:p><w:r><w:t></w:t></w:r></w:p>
+    ${paragraphs}
+  </w:body>
+</w:document>`;
+
+  const relsXml = `<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`;
+
+  const wordRelsXml = `<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+</Relationships>`;
+
+  const contentTypesXml = `<?xml version="1.0" encoding="UTF-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>`;
+
+  // JSZip으로 패키징
+  const script = document.createElement('script');
+  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+  script.onload = () => {
+    const zip = new JSZip();
+    zip.file('[Content_Types].xml', contentTypesXml);
+    zip.file('_rels/.rels', relsXml);
+    zip.file('word/document.xml', docXml);
+    zip.file('word/_rels/document.xml.rels', wordRelsXml);
+    zip.generateAsync({type:'blob', mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'})
+      .then(blob => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        a.click();
+        toast('DOCX 파일이 저장됐어요! 📝');
+      });
+  };
+  script.onerror = () => {
+    // JSZip 로드 실패 시 TXT로 폴백
+    toast('DOCX 변환 실패 — TXT로 저장합니다');
+    exportTxt(chId);
+  };
+  if (!window.JSZip) {
+    document.head.appendChild(script);
+  } else {
+    script.onload();
+  }
+}
+
+function escXml(str) {
+  return (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+}
+
+// 내보내기 모달
+function showExportModal() {
+  const p = getProject();
+  const chapters = p.chapters || [];
+  if (chapters.length === 0) { toast('집필된 화가 없습니다.'); return; }
+
+  showModal(`
+    <div class="modal-title">📤 내보내기</div>
+    <div style="margin-bottom:16px">
+      <label class="label">화 선택</label>
+      <select id="exp-ch" style="margin-bottom:4px">
+        <option value="">전체 (${chapters.length}화)</option>
+        ${chapters.map(c => `<option value="${c.id}">${esc(c.title)} (${(c.content||'').length.toLocaleString()}자)</option>`).join('')}
+      </select>
+    </div>
+    <div style="display:grid;gap:10px;margin-bottom:20px">
+      <button class="btn btn-gold" onclick="copyToClipboard(document.getElementById('exp-ch').value)" style="justify-content:center;font-size:14px;padding:12px">
+        📋 클립보드 복사 (플랫폼 붙여넣기용)
+      </button>
+      <button class="btn btn-outline" onclick="exportTxt(document.getElementById('exp-ch').value)" style="justify-content:center;font-size:14px;padding:12px">
+        📄 TXT 파일로 저장
+      </button>
+      <button class="btn btn-outline" onclick="exportDocx(document.getElementById('exp-ch').value)" style="justify-content:center;font-size:14px;padding:12px">
+        📝 DOCX (Word) 파일로 저장
+      </button>
+      <button class="btn btn-outline" onclick="exportData()" style="justify-content:center;font-size:14px;padding:12px;border-color:var(--teal);color:var(--teal)">
+        💾 JSON 백업 저장 (전체 데이터)
+      </button>
+    </div>
+    <div style="font-size:11px;color:var(--muted);background:var(--cream);border-radius:8px;padding:10px 12px;line-height:1.7">
+      💡 <b>클립보드 복사</b>: 카카오페이지·리디 등 웹 에디터에 바로 붙여넣기<br>
+      💡 <b>TXT</b>: 메모장·기타 도구에서 열기<br>
+      💡 <b>DOCX</b>: MS Word·한컴오피스에서 열기<br>
+      💡 <b>JSON</b>: 앱 데이터 전체 백업 (캐릭터·플롯 포함)
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">닫기</button>
+    </div>
+  `);
+}
+
+
+function showChExportMenu(chId) {
+  const p = getProject();
+  const ch = (p.chapters||[]).find(c => c.id === chId);
+  if (!ch) return;
+  showModal(`
+    <div class="modal-title">📤 ${esc(ch.title)} 내보내기</div>
+    <div style="display:grid;gap:10px;margin-bottom:20px">
+      <button class="btn btn-gold" onclick="copyToClipboard('${chId}');closeModal()" style="justify-content:center;font-size:14px;padding:12px">
+        📋 클립보드 복사
+      </button>
+      <button class="btn btn-outline" onclick="exportTxt('${chId}');closeModal()" style="justify-content:center;font-size:14px;padding:12px">
+        📄 TXT 저장
+      </button>
+      <button class="btn btn-outline" onclick="exportDocx('${chId}');closeModal()" style="justify-content:center;font-size:14px;padding:12px">
+        📝 DOCX 저장
+      </button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">닫기</button>
+    </div>
+  `);
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// 커스텀 확인 모달 (태블릿 confirm 대체)
+// ═══════════════════════════════════════════════════════════
+function confirmDialog(msg, onOk) {
+  const bg = document.createElement('div');
+  bg.style.cssText = 'position:fixed;inset:0;background:rgba(24,18,10,.55);backdrop-filter:blur(4px);z-index:9999;display:flex;align-items:center;justify-content:center;animation:fadein .15s';
+  bg.innerHTML = `
+    <div style="background:var(--paper);border:1px solid var(--border);border-radius:14px;
+      padding:24px;width:300px;max-width:90vw;box-shadow:0 20px 60px rgba(24,18,10,.3);
+      animation:sup .2s;text-align:center">
+      <div style="font-size:28px;margin-bottom:12px">🗑️</div>
+      <div style="font-size:15px;font-weight:600;color:var(--ink);margin-bottom:6px">정말 삭제하시겠습니까?</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:20px">${msg}</div>
+      <div style="display:flex;gap:10px;justify-content:center">
+        <button onclick="this.closest('div[style*=fixed]').remove()"
+          style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:8px;
+            background:transparent;color:var(--muted);cursor:pointer;font-size:14px;
+            font-weight:600;font-family:'Noto Sans KR',sans-serif">취소</button>
+        <button id="confirm-ok-btn"
+          style="flex:1;padding:10px;border:none;border-radius:8px;
+            background:var(--rust);color:#fff;cursor:pointer;font-size:14px;
+            font-weight:700;font-family:'Noto Sans KR',sans-serif">삭제</button>
+      </div>
+    </div>`;
+  document.body.appendChild(bg);
+  bg.querySelector('#confirm-ok-btn').onclick = () => { bg.remove(); onOk(); };
+  bg.addEventListener('click', e => { if (e.target === bg) bg.remove(); });
 }
 
 // ═══════════════════════════════════════════════════════════════
