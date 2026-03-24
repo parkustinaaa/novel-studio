@@ -716,7 +716,7 @@ function showNewProjectModal() {
       <button class="btn btn-outline" onclick="closeModal()">취소</button>
       <button class="btn btn-gold" onclick="createProject()">만들기</button>
     </div>
-  `);
+  `, false);
   setTimeout(() => document.getElementById('np-title')?.focus(), 100);
 }
 
@@ -873,7 +873,7 @@ function showCharModal(idx) {
       <button class="btn btn-outline" onclick="closeModal()">취소</button>
       <button class="btn btn-gold" onclick="saveChar(${idx})">저장</button>
     </div>
-  `);
+  `, false);
   setTimeout(() => document.getElementById('cm-name')?.focus(), 100);
 }
 
@@ -1032,7 +1032,7 @@ function showWorldModal(idx) {
       <button class="btn btn-outline" onclick="closeModal()">취소</button>
       <button class="btn btn-gold" onclick="saveWorld(${idx})">저장</button>
     </div>
-  `);
+  `, false);
   setTimeout(() => document.getElementById('wm-title')?.focus(), 100);
 }
 
@@ -1128,7 +1128,7 @@ function showArcModal(idx) {
       <button class="btn btn-outline" onclick="closeModal()">취소</button>
       <button class="btn btn-gold" onclick="saveArc(${idx})">저장</button>
     </div>
-  `);
+  `, false);
   setTimeout(() => document.getElementById('am-title')?.focus(), 100);
 }
 function saveArc(idx) {
@@ -1163,7 +1163,7 @@ function showSceneModal(arcIdx, sceneIdx) {
       <button class="btn btn-outline" onclick="closeModal()">취소</button>
       <button class="btn btn-gold" onclick="saveScene(${arcIdx},${sceneIdx})">저장</button>
     </div>
-  `);
+  `, false);
   setTimeout(() => document.getElementById('sm-title')?.focus(), 100);
 }
 function saveScene(arcIdx, sceneIdx) {
@@ -1462,7 +1462,7 @@ function applyStage() {
   stage.style.transformOrigin = '0 0';
   stage.style.transform = `translate(${dgState.pan.x}px,${dgState.pan.y}px) scale(${dgState.zoom})`;
   const zl = document.getElementById('zoom-label');
-  if (zl) zl.textContent = Math.round(dgState.zoom * 100) + '%';
+  if (zl) zl.textContent = Math.round(dgState.zoom*100)+'%';
 }
 
 function getDiagrams() { return getProject().diagrams || []; }
@@ -1483,6 +1483,8 @@ function renderDiagram() {
   // 활성 다이어그램이 없으면 첫 번째로
   if (!dgState.activeDiagramId && diagrams.length > 0) {
     dgState.activeDiagramId = diagrams[0].id;
+    dgState.pan = {x:0, y:0};
+    dgState.zoom = 1;
   }
 
   const tabsHtml = diagrams.map(d => `
@@ -1515,9 +1517,9 @@ function renderDiagram() {
               <div style="font-size:15px">다이어그램을 만들어보세요</div>
               <button class="btn btn-gold" onclick="showNewDiagramModal()">＋ 새 다이어그램 만들기</button>
             </div>`
-          : `<div id="dg-stage" style="position:absolute;inset:0;transform-origin:0 0;">
+          : `<div id="dg-stage" style="position:absolute;inset:0;overflow:visible;">
                <div id="diagram-canvas" style="position:absolute;inset:0;"></div>
-               <svg id="diagram-svg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible"><defs></defs><g id="svg-edges"></g></svg>
+               <svg id="diagram-svg" style="position:absolute;left:0;top:0;width:4000px;height:4000px;pointer-events:none;overflow:visible"><defs></defs><g id="svg-edges"></g></svg>
              </div>`}
       </div>
     </div>`;
@@ -1535,6 +1537,8 @@ function switchDiagram(id) {
   dgState.selectedNodeId = null;
   dgState.connecting = false;
   dgState.connectFrom = null;
+  dgState.pan = {x:0, y:0};
+  dgState.zoom = 1;
   renderDiagram();
 }
 
@@ -1596,7 +1600,12 @@ function renderDiagramCanvas() {
     const sx = dx ? hw / Math.abs(dx) : 1e9;
     const sy = dy ? hh / Math.abs(dy) : 1e9;
     const s  = Math.min(sx, sy);
-    return {x: cx + dx * s, y: cy + dy * s};
+    const ex = cx + dx * s, ey = cy + dy * s;
+    if (arrowOff > 0) {
+      const len = Math.sqrt(dx*dx + dy*dy) || 1;
+      return {x: ex - (dx/len)*arrowOff, y: ey - (dy/len)*arrowOff};
+    }
+    return {x: ex, y: ey};
   }
 
   (dg.edges||[]).forEach((edge, ei) => {
@@ -1705,6 +1714,7 @@ function renderDiagramCanvas() {
 
     svgEdges.appendChild(g);
   });
+
 }
 
 function setupDiagramEvents() {
@@ -1761,7 +1771,8 @@ function setupDiagramEvents() {
 
     // 드래그 준비
     const lpos = screenToLogic(x, y);
-    drag = { id, offX: lpos.x - (node0?.x||0), offY: lpos.y - (node0?.y||0) };
+    // node0.x/y는 이미 논리좌표 → offset도 논리좌표 기준
+    drag = { id, offX: lpos.x - (node0?.x ?? lpos.x), offY: lpos.y - (node0?.y ?? lpos.y) };
     nodeEl.style.zIndex = 100;
     e.preventDefault();
   }
@@ -1877,23 +1888,22 @@ function setupDiagramEvents() {
         const wr   = wrapEl.getBoundingClientRect();
 
         const wr2 = wrapEl.getBoundingClientRect();
-        // 줌: 두 손가락 거리 변화
+        // 줌: 중점 고정
         if (lastDist && lastDist > 0) {
           const ratio   = dist / lastDist;
-          const newZoom = Math.max(0.2, Math.min(4, dgState.zoom * ratio));
+          const newZoom = Math.max(0.3, Math.min(3, dgState.zoom * ratio));
           const mx = mid.x - wr2.left;
           const my = mid.y - wr2.top;
           dgState.pan.x = mx - (mx - dgState.pan.x) * (newZoom / dgState.zoom);
           dgState.pan.y = my - (my - dgState.pan.y) * (newZoom / dgState.zoom);
           dgState.zoom  = newZoom;
         }
-        // 패닝: 두 손가락 중점 이동
-        if (lastMidX !== null && lastMidY !== null) {
+        // 패닝
+        if (lastMidX !== null) {
           dgState.pan.x += mid.x - lastMidX;
           dgState.pan.y += mid.y - lastMidY;
         }
-        lastDist = dist;
-        lastMidX = mid.x; lastMidY = mid.y;
+        lastDist = dist; lastMidX = mid.x; lastMidY = mid.y;
         applyStage();
       }
     }, {passive: false});
@@ -2011,7 +2021,9 @@ function renderEdgesOnly() {
   svgEdges.innerHTML = defs;
 
   function ep(node, toX, toY, off) {
-    const cx=node.x+90, cy=node.y+38;
+    const el=document.getElementById('node-'+node.id);
+    const hw=el?el.offsetWidth/2:90, hh=el?el.offsetHeight/2:38;
+    const cx=node.x+hw, cy=node.y+hh;
     const dx=toX-cx, dy=toY-cy;
     if(!dx&&!dy) return{x:cx,y:cy};
     const s=Math.min(dx?90/Math.abs(dx):1e9, dy?38/Math.abs(dy):1e9);
@@ -2046,7 +2058,6 @@ function renderEdgesOnly() {
 function resetView() {
   dgState.pan={x:0,y:0};
   dgState.zoom=1;
-  applyStage();
   renderDiagramCanvas();
 }
 function clearSelection() { dgState.selectedNodeId=null; renderDiagramCanvas(); }
@@ -2129,7 +2140,7 @@ function showEditEdgeModal(idx) {
       <button class="btn btn-danger" onclick="deleteEdge(${idx});closeModal()">삭제</button>
       <button class="btn btn-outline" onclick="closeModal()">취소</button>
       <button class="btn btn-gold" onclick="saveEdge(${idx})">저장</button>
-    </div>`);
+    </div>`, false);
 }
 
 function saveEdge(idx) {
@@ -2294,7 +2305,7 @@ function showEditNodeModal(id) {
       <button class="btn btn-danger" onclick="deleteNode('${id}');closeModal()">삭제</button>
       <button class="btn btn-outline" onclick="closeModal()">취소</button>
       <button class="btn btn-gold" onclick="editNode('${id}')">저장</button>
-    </div>`);
+    </div>`, false);
 }
 
 function editNode(id) {
@@ -2633,7 +2644,7 @@ function showShortcutSettings() {
         <button class="btn btn-gold" onclick="applyShortcuts()">저장</button>
       </div>
     </div>
-  `);
+  `, false);
 }
 
 function applyShortcuts() {
@@ -3119,13 +3130,15 @@ function confirmDialog(msg, onOk) {
 // ═══════════════════════════════════════════════════════════════
 // MODAL SYSTEM
 // ═══════════════════════════════════════════════════════════════
-function showModal(html) {
+function showModal(html, closable=false) {
   closeModal();
   const bg = document.createElement('div');
   bg.className = 'modal-bg';
   bg.id = 'modal-bg';
   bg.innerHTML = `<div class="modal">${html}</div>`;
-  bg.addEventListener('click', e => { if (e.target === bg) closeModal(); });
+  if (closable) {
+    bg.addEventListener('click', e => { if (e.target === bg) closeModal(); });
+  }
   document.body.appendChild(bg);
 }
 function selectEdgeOpt(groupId, btn, val) {
@@ -3185,6 +3198,32 @@ function saveShortcuts(map) {
   localStorage.setItem('wnstudio_shortcuts', JSON.stringify(map));
 }
 let SHORTCUT_SYMBOLS = loadShortcuts();
+
+
+function showSavedBanner(success=true) {
+  const existing = document.getElementById('saved-banner');
+  if (existing) { existing.remove(); }
+  const banner = document.createElement('div');
+  banner.id = 'saved-banner';
+  banner.style.cssText = `
+    position:fixed;top:50%;left:50%;
+    transform:translate(-50%,-50%);
+    background:${success ? 'rgba(24,18,10,.85)' : 'rgba(181,69,27,.9)'};
+    color:#fff;padding:16px 32px;border-radius:40px;
+    font-size:16px;font-weight:700;
+    font-family:'Noto Sans KR',sans-serif;letter-spacing:.5px;
+    z-index:9999;pointer-events:none;
+    box-shadow:0 8px 32px rgba(0,0,0,.3);
+    opacity:0;transition:opacity .15s;
+  `;
+  banner.textContent = success ? '✓ 저장되었습니다!' : '⚠️ 저장이 되지 않았습니다.';
+  document.body.appendChild(banner);
+  requestAnimationFrame(() => { banner.style.opacity = '1'; });
+  setTimeout(() => {
+    banner.style.opacity = '0';
+    setTimeout(() => banner.remove(), 200);
+  }, success ? 1200 : 2000);
+}
 
 // ═══════════════════════════════════════════════════════════════
 // INIT
@@ -3280,19 +3319,7 @@ exportData = function() {
   setLastBackupTime();
 };
 
-// 앱 종료/새로고침 전 감지
-window.addEventListener('beforeunload', (e) => {
-  // 작품이 있을 때만 알림
-  if (state.projects.length === 0) return;
-  const last = getLastBackupTime();
-  const now = new Date();
-  const hoursSince = last ? (now - last) / 1000 / 60 / 60 : 999;
-  // 마지막 백업이 1시간 이상 됐으면 브라우저 기본 종료 경고 표시
-  if (hoursSince > 1) {
-    e.preventDefault();
-    e.returnValue = '';
-  }
-});
+// beforeunload 제거 (PWA에서 오동작)
 
 // 페이지 숨김(탭 전환, 홈 버튼 등) 감지 → 배너 표시
 document.addEventListener('visibilitychange', () => {
