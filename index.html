@@ -1879,7 +1879,7 @@ function setupDiagramEvents() {
           showEditNodeModal(drag.id);   // 더블탭 → 편집
         } else {
           tapId = drag.id;
-          tapTimer = setTimeout(() => { tapTimer = null; tapId = null; }, 350);
+          tapTimer = setTimeout(() => { tapTimer = null; tapId = null; }, 500);
         }
       } else {
         saveDiagram();
@@ -2042,9 +2042,15 @@ function setupDiagramEvents() {
     wrap.addEventListener('touchend',    () => clearTimeout(edgeTimer), {passive: true});
     wrap.addEventListener('touchcancel', () => clearTimeout(edgeTimer), {passive: true});
 
-    // PC 더블클릭으로 선 편집
+    // PC 더블클릭으로 노드/선 편집
     wrap.addEventListener('dblclick', e => {
-      if (e.target.closest('.dg-node')) return;
+      // 노드 더블클릭 → 편집 모달
+      const nodeEl = e.target.closest('.dg-node');
+      if (nodeEl) {
+        const id = nodeEl.dataset.id;
+        if (id) showEditNodeModal(id);
+        return;
+      }
       const dg = getActiveDiagram();
       if (!dg || !dg.edges || dg.edges.length === 0) return;
       const wrapRect = wrap.getBoundingClientRect();
@@ -3384,7 +3390,7 @@ function renderStorageIndicator() {
   if (!el) return;
 
   const used = getStorageUsage();
-  const limit = 5 * 1024 * 1024; // 5MB 기준
+  const limit = 10 * 1024 * 1024; // 10MB 기준 (Chrome Android)
   const pct = Math.min(100, (used / limit * 100));
   const color = pct > 80 ? 'var(--rust)' : pct > 60 ? 'var(--gold)' : 'var(--teal)';
 
@@ -3393,7 +3399,7 @@ function renderStorageIndicator() {
       <div style="width:80px;height:6px;background:var(--border);border-radius:3px;overflow:hidden">
         <div style="width:${pct.toFixed(1)}%;height:100%;background:${color};border-radius:3px;transition:width .5s"></div>
       </div>
-      <span style="font-size:11px;color:var(--muted)">${formatBytes(used)} / 5MB</span>
+      <span style="font-size:11px;color:var(--muted)">${formatBytes(used)} / 10MB</span>
       ${pct > 80 ? '<span style="font-size:11px;color:var(--rust);font-weight:700">⚠️ 용량 부족</span>' : ''}
     </div>
   `;
