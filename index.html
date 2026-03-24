@@ -1805,15 +1805,12 @@ function setupDiagramEvents() {
     const id = nodeEl.dataset.id;
     const {x, y} = xy(e);
 
-    // 더블탭 감지
-    if (tapId === id && tapTimer) {
-      clearTimeout(tapTimer); tapTimer = null; tapId = null;
-      showEditNodeModal(id);
-      // return 하지 않음 - drag는 계속 설정
-    } else {
+    // 첫 탭 → 선택, 선택된 노드 재탭 → 편집
+    if (dgState.selectedNodeId === id) {
+      // 이미 선택된 노드를 탭 → 편집 모달 열기 (짧게 탭했을 때만)
       tapId = id;
-      clearTimeout(tapTimer);
-      tapTimer = setTimeout(() => { tapTimer = null; tapId = null; }, 400);
+    } else {
+      tapId = null;
     }
 
     // 드래그 offset 계산을 위해 node 미리 찾기
@@ -1883,7 +1880,18 @@ function setupDiagramEvents() {
   function nodeEnd(e) {
     clearTimeout(longTimer);
     if (drag) {
-      if (moved) {
+      if (!moved) {
+        // 짧은 탭
+        if (tapId === drag.id) {
+          // 이미 선택된 상태에서 탭 → 편집
+          showEditNodeModal(drag.id);
+        } else {
+          // 첫 탭 → 선택
+          dgState.selectedNodeId = drag.id;
+          renderDiagramCanvas();
+        }
+        tapId = null;
+      } else if (moved) {
         saveDiagram();
       }
       const el = document.getElementById('node-' + drag.id);
