@@ -1,4 +1,4 @@
-const CACHE = 'wnstudio-1774335943';
+const CACHE = 'wnstudio-1774336824';
 
 self.addEventListener('install', e => {
   e.waitUntil(
@@ -35,7 +35,6 @@ self.addEventListener('fetch', e => {
   );
 });
 
-// 메시지 수신 시 즉시 활성화
 self.addEventListener('message', e => {
   if (e.data?.type === 'SKIP_WAITING') self.skipWaiting();
 });
