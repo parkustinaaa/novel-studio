@@ -1805,11 +1805,11 @@ function setupDiagramEvents() {
     const id = nodeEl.dataset.id;
     const {x, y} = xy(e);
 
-    // 더블탭 감지 (nodeStart 시점에 카운트)
+    // 더블탭 감지
     if (tapId === id && tapTimer) {
       clearTimeout(tapTimer); tapTimer = null; tapId = null;
       showEditNodeModal(id);
-      return;
+      // return 하지 않음 - drag는 계속 설정
     } else {
       tapId = id;
       clearTimeout(tapTimer);
@@ -2050,7 +2050,7 @@ function setupDiagramEvents() {
       const nodeEl = e.target.closest('.dg-node');
       if (nodeEl) {
         const id = nodeEl.dataset.id;
-        if (id) showEditNodeModal(id);
+        if (id) { e.preventDefault(); showEditNodeModal(id); }
         return;
       }
       const dg = getActiveDiagram();
