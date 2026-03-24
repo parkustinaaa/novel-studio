@@ -3235,8 +3235,26 @@ renderHome();
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('sw.js')
-      .then(() => console.log('SW registered'))
+      .then(reg => {
+        // 새 버전 감지 시 즉시 적용
+        reg.addEventListener('updatefound', () => {
+          const newSW = reg.installing;
+          newSW.addEventListener('statechange', () => {
+            if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
+              newSW.postMessage({type: 'SKIP_WAITING'});
+              window.location.reload();
+            }
+          });
+        });
+        // 주기적으로 업데이트 체크
+        setInterval(() => reg.update(), 60000);
+      })
       .catch(e => console.log('SW failed', e));
+  });
+
+  // 새 SW 활성화 시 자동 새로고침
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    window.location.reload();
   });
 }
 
