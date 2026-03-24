@@ -199,6 +199,15 @@ button{cursor:pointer;font-family:'Noto Sans KR',sans-serif;border:none;border-r
   resize:none;box-shadow:none;padding:0}
 .wordcount{font-size:12px;color:var(--muted);background:var(--cream);
   padding:3px 10px;border-radius:20px;white-space:nowrap}
+.symbol-palette{position:absolute;top:100%;left:0;right:0;z-index:300;
+  background:var(--white);border:1px solid var(--border);border-top:none;
+  box-shadow:0 6px 20px var(--shadow);padding:10px 14px;display:flex;flex-wrap:wrap;gap:6px;}
+.sym-btn{min-width:36px;height:36px;padding:0 8px;background:var(--cream);
+  border:1px solid var(--border);border-radius:7px;font-size:16px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-family:"Noto Serif KR",serif;transition:all .15s;}
+.sym-btn:hover,.sym-btn:active{background:var(--gold-light);border-color:var(--gold);}
+.editor-toolbar{position:relative;}
 
 /* ═══ STATUS COLORS ═══════════════════════════════════════════ */
 .s-기획중{background:#fff3e0;color:#b36a00}
@@ -284,6 +293,24 @@ button{cursor:pointer;font-family:'Noto Sans KR',sans-serif;border:none;border-r
   font-family:'Noto Serif KR',serif;min-height:120px}
 .memo-color-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;cursor:pointer;border:2px solid transparent}
 .memo-color-dot:hover{border-color:var(--gold)}
+
+/* ═══ MANUSCRIPT ════════════════════════════════════════════ */
+.ms-preview{
+  background:#fff;box-shadow:0 4px 24px rgba(0,0,0,.12);
+  margin:0 auto;padding:0;transition:all .3s;position:relative;
+}
+.ms-page{
+  padding:var(--ms-pad-v) var(--ms-pad-h);
+  font-family:var(--ms-font);font-size:var(--ms-size);
+  line-height:var(--ms-line);color:#1a1208;
+  min-height:var(--ms-height);word-break:keep-all;
+  white-space:pre-wrap;
+}
+.ms-header{
+  border-bottom:1px solid #e0e0e0;padding:10px 20px;
+  display:flex;justify-content:space-between;align-items:center;
+  font-size:11px;color:#999;background:#fafafa;
+}
 
 /* ═══ RESPONSIVE ════════════════════════════════════════════ */
 @media(max-width:768px){
@@ -379,6 +406,10 @@ button{cursor:pointer;font-family:'Noto Sans KR',sans-serif;border:none;border-r
           메모장
         </button>
         <div class="nav-section">출고</div>
+        <button class="nav-item" onclick="navigate('manuscript')" data-tab="manuscript">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="3"/></svg>
+          원고 설정
+        </button>
         <button class="nav-item" onclick="navigate('schedule')" data-tab="schedule">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
           연재 관리
@@ -547,6 +578,7 @@ function navigate(tab) {
     chapters: renderChapters,
     schedule: renderSchedule,
     diagram: renderDiagram,
+    manuscript: renderManuscript,
     memo: renderMemo,
   };
   if (renders[tab]) renders[tab]();
@@ -1179,6 +1211,7 @@ function renderChapters() {
           </div>`}
       </div>
     </div>`;
+  setTimeout(refreshShortcutBar, 0);
 }
 
 function renderEditorContent(ch) {
@@ -1191,12 +1224,16 @@ function renderEditorContent(ch) {
       </select>
       <span class="wordcount" id="wc-display">${(ch.content||'').length.toLocaleString()}자</span>
       <div style="flex:1"></div>
+      <button class="btn btn-outline btn-sm" id="sym-toggle-btn" onclick="toggleSymbolPalette()" style="font-size:13px">
+        ✦ 기호
+      </button>
       <button class="btn btn-outline btn-sm" onclick="deleteChapter('${ch.id}')" style="color:var(--rust);border-color:rgba(181,69,27,.25)">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
         삭제
       </button>
     </div>
-    <div class="editor-content">
+    <div id="shortcut-bar" style="padding:6px 12px;background:#f5f0e8;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:4px;flex-wrap:wrap;flex-shrink:0;"></div>
+        <div class="editor-content">
       <textarea id="prose-editor" placeholder="이야기를 시작하세요..."
         oninput="onEditorInput('${ch.id}',this.value)">${esc(ch.content||'')}</textarea>
     </div>`;
@@ -1382,8 +1419,36 @@ let dgState = {
   pan: {x:0, y:0},
   zoom: 1,
   dragging: null,
-  dragOffset: {x:0, y:0},
+  dragOffset: {x:0, y:0},  // 논리 좌표 기준 offset
 };
+
+// 화면 좌표 → 논리 좌표
+function screenToLogic(sx, sy) {
+  const wrap = document.getElementById('dg-wrap');
+  const wr   = wrap ? wrap.getBoundingClientRect() : {left:0, top:0};
+  return {
+    x: (sx - wr.left - dgState.pan.x) / dgState.zoom,
+    y: (sy - wr.top  - dgState.pan.y) / dgState.zoom,
+  };
+}
+
+// 논리 좌표 → 화면 좌표 (wrap 기준)
+function logicToScreen(lx, ly) {
+  return {
+    x: lx * dgState.zoom + dgState.pan.x,
+    y: ly * dgState.zoom + dgState.pan.y,
+  };
+}
+
+// stage 트랜스폼 적용
+function applyStage() {
+  const stage = document.getElementById('dg-stage');
+  if (!stage) return;
+  stage.style.transformOrigin = '0 0';
+  stage.style.transform = `translate(${dgState.pan.x}px,${dgState.pan.y}px) scale(${dgState.zoom})`;
+  const zl = document.getElementById('zoom-label');
+  if (zl) zl.textContent = Math.round(dgState.zoom * 100) + '%';
+}
 
 function getDiagrams() { return getProject().diagrams || []; }
 function getActiveDiagram() { return getDiagrams().find(d => d.id === dgState.activeDiagramId); }
@@ -1422,20 +1487,23 @@ function renderDiagram() {
         <button class="btn btn-outline btn-sm" onclick="showAddNodeModal()">＋ 노드 추가</button>
         <button class="btn btn-outline btn-sm" onclick="toggleConnectMode()" id="btn-connect">🔗 연결</button>
         <button class="btn btn-outline btn-sm" onclick="resetView()">⊕ 화면 맞춤</button>
+        <span id="zoom-label" style="font-size:11px;color:var(--muted);min-width:36px;text-align:center">100%</span>
         <button class="btn btn-outline btn-sm" onclick="clearSelection()">✕ 선택 해제</button>
         <div style="flex:1"></div>
         <button class="btn btn-danger btn-sm" onclick="deleteActiveDiagram()">다이어그램 삭제</button>
         `:''}
       </div>
-      <div class="diagram-canvas-wrap" id="dg-wrap">
+      <div class="diagram-canvas-wrap" id="dg-wrap" style="touch-action:none">
         ${diagrams.length===0
           ? `<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--muted)">
               <div style="font-size:40px">🗂️</div>
               <div style="font-size:15px">다이어그램을 만들어보세요</div>
               <button class="btn btn-gold" onclick="showNewDiagramModal()">＋ 새 다이어그램 만들기</button>
             </div>`
-          : `<div id="diagram-canvas" style="position:absolute;inset:0;"></div>
-             <svg id="diagram-svg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible"><defs></defs><g id="svg-edges"></g></svg>`}
+          : `<div id="dg-stage" style="position:absolute;inset:0;transform-origin:0 0;">
+               <div id="diagram-canvas" style="position:absolute;inset:0;"></div>
+               <svg id="diagram-svg" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible"><defs></defs><g id="svg-edges"></g></svg>
+             </div>`}
       </div>
     </div>`;
 
@@ -1468,8 +1536,8 @@ function renderDiagramCanvas() {
     const el = document.createElement('div');
     el.className = `dg-node type-${node.type}${node.id===dgState.selectedNodeId?' selected':''}`;
     el.id = 'node-'+node.id;
-    el.style.left = (node.x + dgState.pan.x) + 'px';
-    el.style.top = (node.y + dgState.pan.y) + 'px';
+    el.style.left = node.x + 'px';
+    el.style.top  = node.y + 'px';
     el.dataset.id = node.id;
     const typeInfo = DG_TYPES.find(t=>t.id===node.type)||DG_TYPES[0];
     // 커스텀 색상 적용
@@ -1506,8 +1574,8 @@ function renderDiagramCanvas() {
     const el = document.getElementById('node-' + node.id);
     const hw = el ? el.offsetWidth  / 2 : 90;
     const hh = el ? el.offsetHeight / 2 : 38;
-    const cx = node.x + dgState.pan.x + hw;
-    const cy = node.y + dgState.pan.y + hh;
+    const cx = node.x + hw;
+    const cy = node.y + hh;
     const dx = toX - cx, dy = toY - cy;
     if (!dx && !dy) return {x: cx, y: cy};
     const sx = dx ? hw / Math.abs(dx) : 1e9;
@@ -1531,10 +1599,10 @@ function renderDiagramCanvas() {
     const tel = document.getElementById('node-' + toNode.id);
     const fhw = fel ? fel.offsetWidth/2  : 90, fhh = fel ? fel.offsetHeight/2 : 38;
     const thw = tel ? tel.offsetWidth/2  : 90, thh = tel ? tel.offsetHeight/2 : 38;
-    const fcx = fromNode.x + dgState.pan.x + fhw;
-    const fcy = fromNode.y + dgState.pan.y + fhh;
-    const tcx = toNode.x   + dgState.pan.x + thw;
-    const tcy = toNode.y   + dgState.pan.y + thh;
+    const fcx = fromNode.x + fhw;
+    const fcy = fromNode.y + fhh;
+    const tcx = toNode.x   + thw;
+    const tcy = toNode.y   + thh;
 
     const hasEnd   = (dir === 'forward' || dir === 'both');
     const hasStart = (dir === 'both');
@@ -1647,6 +1715,10 @@ function setupDiagramEvents() {
     const id = nodeEl.dataset.id;
     const {x, y} = xy(e);
 
+    // 드래그 offset 계산을 위해 node 미리 찾기
+    const dg0   = getActiveDiagram();
+    const node0 = (dg0?.nodes||[]).find(n => n.id === id);
+
     // 연결 모드 → 탭만으로 처리
     if (dgState.connecting) {
       if (!dgState.connectFrom) {
@@ -1668,13 +1740,13 @@ function setupDiagramEvents() {
     longTimer = setTimeout(() => {
       if (!moved) {
         drag = null;
-        showNodeContextMenu(id, x, y);
+        showNodeContextMenu(id, x, y);  // x,y는 화면좌표 (메뉴 위치용)
       }
     }, 800);
 
     // 드래그 준비
-    const rect = nodeEl.getBoundingClientRect();
-    drag = { id, offX: x - rect.left, offY: y - rect.top };
+    const lpos = screenToLogic(x, y);
+    drag = { id, offX: lpos.x - (node0?.x||0), offY: lpos.y - (node0?.y||0) };
     nodeEl.style.zIndex = 100;
     e.preventDefault();
   }
@@ -1685,17 +1757,20 @@ function setupDiagramEvents() {
     const {x, y} = xy(e);
     moved = true;
     clearTimeout(longTimer);
-    const dg = getActiveDiagram();
-    const node = (dg?.nodes||[]).find(n => n.id === drag.id);
-    if (!node) return;
+    const dgEnd  = getActiveDiagram();
+    const nodeEnd2 = (dgEnd?.nodes||[]).find(n => n.id === drag.id);
+    if (!nodeEnd2) return;
     const wrap = document.getElementById('dg-wrap');
-    const wr   = wrap.getBoundingClientRect();
-    node.x = x - wr.left - drag.offX - dgState.pan.x;
-    node.y = y - wr.top  - drag.offY - dgState.pan.y;
+    const lpos  = screenToLogic(x, y);
+    const dg1   = getActiveDiagram();
+    const nodeMv = (dg1?.nodes||[]).find(n => n.id === drag.id);
+    if (!nodeMv) return;
+    nodeMv.x = lpos.x - drag.offX;
+    nodeMv.y = lpos.y - drag.offY;
     const el = document.getElementById('node-' + drag.id);
     if (el) {
-      el.style.left = (node.x + dgState.pan.x) + 'px';
-      el.style.top  = (node.y + dgState.pan.y) + 'px';
+      el.style.left = nodeMv.x + 'px';
+      el.style.top  = nodeMv.y + 'px';
     }
     // 엣지만 빠르게 다시 그리기
     renderEdgesOnly();
@@ -1749,6 +1824,73 @@ function setupDiagramEvents() {
     if (nodeEl) showNodeContextMenu(nodeEl.dataset.id, e.clientX, e.clientY);
   });
 
+  // ── 핀치 줌 + 두 손가락 패닝 ────────────────────────────────
+  const wrapEl = document.getElementById('dg-wrap');
+  if (wrapEl) {
+    let lastDist  = null;
+    let lastMidX  = null, lastMidY  = null;
+    let isPinching = false;
+
+    function getTouchDist(e) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      return Math.sqrt(dx*dx + dy*dy);
+    }
+    function getTouchMid(e) {
+      return {
+        x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+        y: (e.touches[0].clientY + e.touches[1].clientY) / 2,
+      };
+    }
+
+    wrapEl.addEventListener('touchstart', e => {
+      if (e.touches.length === 2) {
+        isPinching = true;
+        drag = null; // 드래그 취소
+        lastDist = getTouchDist(e);
+        const mid = getTouchMid(e);
+        lastMidX = mid.x; lastMidY = mid.y;
+        e.preventDefault();
+      }
+    }, {passive: false});
+
+    wrapEl.addEventListener('touchmove', e => {
+      if (e.touches.length === 2 && isPinching) {
+        e.preventDefault();
+        const dist = getTouchDist(e);
+        const mid  = getTouchMid(e);
+        const wr   = wrapEl.getBoundingClientRect();
+
+        const wr2 = wrapEl.getBoundingClientRect();
+        // 줌: 두 손가락 거리 변화
+        if (lastDist && lastDist > 0) {
+          const ratio   = dist / lastDist;
+          const newZoom = Math.max(0.2, Math.min(4, dgState.zoom * ratio));
+          const mx = mid.x - wr2.left;
+          const my = mid.y - wr2.top;
+          dgState.pan.x = mx - (mx - dgState.pan.x) * (newZoom / dgState.zoom);
+          dgState.pan.y = my - (my - dgState.pan.y) * (newZoom / dgState.zoom);
+          dgState.zoom  = newZoom;
+        }
+        // 패닝: 두 손가락 중점 이동
+        if (lastMidX !== null && lastMidY !== null) {
+          dgState.pan.x += mid.x - lastMidX;
+          dgState.pan.y += mid.y - lastMidY;
+        }
+        lastDist = dist;
+        lastMidX = mid.x; lastMidY = mid.y;
+        applyStage();
+      }
+    }, {passive: false});
+
+    wrapEl.addEventListener('touchend', e => {
+      if (e.touches.length < 2) {
+        isPinching = false;
+        lastDist = null; lastMidX = null; lastMidY = null;
+      }
+    }, {passive: true});
+  }
+
   // ── 연결선 터치 — wrap 전체에서 감지 (SVG pointer-events 우회) ──
   const wrap = document.getElementById('dg-wrap');
   if (wrap) {
@@ -1767,8 +1909,8 @@ function setupDiagramEvents() {
       const dg = getActiveDiagram();
       if (!dg || !dg.edges || dg.edges.length === 0) return;
       const wrapRect = wrap.getBoundingClientRect();
-      const tx = edgeTouchX - wrapRect.left;
-      const ty = edgeTouchY - wrapRect.top;
+      const tl = screenToLogic(edgeTouchX, edgeTouchY);
+      const tx = tl.x, ty = tl.y;
 
       let closestIdx = -1;
       let closestDist = 30; // 30px 이내만 감지
@@ -1816,8 +1958,8 @@ function setupDiagramEvents() {
       const dg = getActiveDiagram();
       if (!dg || !dg.edges || dg.edges.length === 0) return;
       const wrapRect = wrap.getBoundingClientRect();
-      const tx = e.clientX - wrapRect.left;
-      const ty = e.clientY - wrapRect.top;
+      const tl2 = screenToLogic(e.clientX, e.clientY);
+      const tx = tl2.x, ty = tl2.y;
       let closestIdx = -1, closestDist = 20;
       (dg.edges||[]).forEach((edge, ei) => {
         const from = (dg.nodes||[]).find(n=>n.id===edge.from);
@@ -1854,7 +1996,7 @@ function renderEdgesOnly() {
   svgEdges.innerHTML = defs;
 
   function ep(node, toX, toY, off) {
-    const cx=node.x+dgState.pan.x+90, cy=node.y+dgState.pan.y+38;
+    const cx=node.x+90, cy=node.y+38;
     const dx=toX-cx, dy=toY-cy;
     if(!dx&&!dy) return{x:cx,y:cy};
     const s=Math.min(dx?90/Math.abs(dx):1e9, dy?38/Math.abs(dy):1e9);
@@ -1869,8 +2011,8 @@ function renderEdgesOnly() {
     if(!fn||!tn) return;
     const color=edge.color||'#235f62', dir=edge.dir||'forward', cid=color.replace('#','');
     const fe=document.getElementById('node-'+fn.id), te=document.getElementById('node-'+tn.id);
-    const fcx=fn.x+dgState.pan.x+(fe?fe.offsetWidth/2:90), fcy=fn.y+dgState.pan.y+(fe?fe.offsetHeight/2:38);
-    const tcx=tn.x+dgState.pan.x+(te?te.offsetWidth/2:90), tcy=tn.y+dgState.pan.y+(te?te.offsetHeight/2:38);
+    const fcx=fn.x+(fe?fe.offsetWidth/2:90), fcy=fn.y+(fe?fe.offsetHeight/2:38);
+    const tcx=tn.x+(te?te.offsetWidth/2:90), tcy=tn.y+(te?te.offsetHeight/2:38);
     const he=dir==='forward'||dir==='both', hs=dir==='both';
     const fp=ep(fn,tcx,tcy,hs?13:0), tp=ep(tn,fcx,fcy,he?13:0);
     const line=document.createElementNS('http://www.w3.org/2000/svg','line');
@@ -1884,7 +2026,14 @@ function renderEdgesOnly() {
   });
 }
 
-function resetView() { dgState.pan={x:0,y:0}; dgState.zoom=1; renderDiagramCanvas(); }
+
+
+function resetView() {
+  dgState.pan={x:0,y:0};
+  dgState.zoom=1;
+  applyStage();
+  renderDiagramCanvas();
+}
 function clearSelection() { dgState.selectedNodeId=null; renderDiagramCanvas(); }
 
 function toggleConnectMode(force) {
@@ -2359,6 +2508,363 @@ function setMemoColor(i, color) {
   saveMemos(); renderMemo();
 }
 
+
+// ═══════════════════════════════════════════════════════════
+// 특수기호 팔레트
+// ═══════════════════════════════════════════════════════════
+const SYMBOL_GROUPS = [
+  {label:'따옴표', s:['"','"','‘','’','「','」','『','』','〈','〉','《','》','(',')']},
+  {label:'점·선',  s:['…','·','—','–','~','～','•','―']},
+  {label:'기호',   s:['○','●','□','■','△','▲','▽','▼','◇','◆','☆','★','×','✕','✓','※']},
+  {label:'숫자원', s:['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩']},
+  {label:'화살표', s:['→','←','↑','↓','↔','⇒','⇐','⇔']},
+];
+
+function buildSymbolPalette(){
+  const pal=document.getElementById('symbol-palette');
+  if(!pal||pal.dataset.built) return;
+  pal.dataset.built='1';
+  SYMBOL_GROUPS.forEach(grp=>{
+    const lbl=document.createElement('div');
+    lbl.style.cssText='width:100%;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1px;margin-top:6px;margin-bottom:2px';
+    lbl.textContent=grp.label;
+    pal.appendChild(lbl);
+    grp.s.forEach(sym=>{
+      const btn=document.createElement('button');
+      btn.className='sym-btn';
+      btn.textContent=sym;
+      btn.title=sym;
+      btn.onclick=()=>insertSymbol(sym);
+      pal.appendChild(btn);
+    });
+  });
+}
+
+function toggleSymbolPalette(){
+  const pal=document.getElementById('symbol-palette');
+  const tog=document.getElementById('sym-toggle-btn');
+  if(!pal) return;
+  buildSymbolPalette();
+  const open=pal.style.display!=='none'&&pal.style.display!=='';
+  pal.style.display=open?'none':'flex';
+  if(tog){
+    tog.style.background=open?'':'var(--gold-light)';
+    tog.style.borderColor=open?'':'var(--gold)';
+    tog.style.color=open?'':'var(--gold)';
+  }
+}
+
+function insertSymbol(sym){
+  const ta=document.getElementById('prose-editor');
+  if(!ta) return;
+  const s=ta.selectionStart, e=ta.selectionEnd;
+  ta.value=ta.value.slice(0,s)+sym+ta.value.slice(e);
+  ta.selectionStart=ta.selectionEnd=s+sym.length;
+  ta.focus();
+  ta.dispatchEvent(new Event('input',{bubbles:true}));
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// 단축키 설정
+// ═══════════════════════════════════════════════════════════
+const ALL_SYMBOLS = [
+  '"','"','‘','’','…','·','—','–','~',
+  '「','」','『','』','〈','〉','《','》','(',')',
+  '○','●','□','■','△','▲','☆','★','×','✓','※','·','•',
+  '→','←','↑','↓','↔','⇒','①','②','③','④','⑤',
+];
+
+function showShortcutSettings() {
+  const keys = ['1','2','3','4','5','6','7','8','9','0'];
+  const symOpts = ALL_SYMBOLS.map(s =>
+    `<option value="${s}">${s}</option>`
+  ).join('');
+
+  const rows = keys.map(k => {
+    const cur = SHORTCUT_SYMBOLS[k] || '';
+    return `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="font-size:13px;font-weight:700;color:var(--muted);min-width:70px">
+          Ctrl + <span style="background:var(--cream);border:1px solid var(--border);border-radius:5px;padding:2px 8px;color:var(--ink)">${k}</span>
+        </div>
+        <select id="sc-${k}" style="flex:1;padding:6px 10px;font-size:15px;font-family:'Noto Serif KR',serif">
+          <option value="">없음</option>
+          ${ALL_SYMBOLS.map(s => `<option value="${s}" ${s===cur?'selected':''}>${s} ${s===cur?'(현재)':''}</option>`).join('')}
+        </select>
+        <input id="sci-${k}" value="${cur}" maxlength="2"
+          style="width:52px;text-align:center;font-size:18px;font-family:'Noto Serif KR',serif;padding:6px"
+          placeholder="직접"
+          oninput="document.getElementById('sc-${k}').value=''"
+        >
+      </div>`;
+  }).join('');
+
+  showModal(`
+    <div class="modal-title">⚙ 단축키 설정</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px">
+      목록에서 선택하거나 오른쪽 칸에 직접 입력하세요. (최대 2자)
+    </div>
+    <div style="margin-bottom:20px">${rows}</div>
+    <div style="display:flex;gap:10px;justify-content:space-between">
+      <button class="btn btn-outline" onclick="resetShortcuts()">기본값으로</button>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-outline" onclick="closeModal()">취소</button>
+        <button class="btn btn-gold" onclick="applyShortcuts()">저장</button>
+      </div>
+    </div>
+  `);
+}
+
+function applyShortcuts() {
+  const keys = ['1','2','3','4','5','6','7','8','9','0'];
+  const newMap = {};
+  keys.forEach(k => {
+    const direct = document.getElementById('sci-' + k)?.value.trim();
+    const sel    = document.getElementById('sc-' + k)?.value;
+    newMap[k] = direct || sel || '';
+  });
+  SHORTCUT_SYMBOLS = newMap;
+  saveShortcuts(newMap);
+  closeModal();
+  refreshShortcutBar();
+  toast('단축키가 저장됐습니다 ✓');
+}
+
+function resetShortcuts() {
+  if (!confirm('기본값으로 초기화하시겠습니까?')) return;
+  SHORTCUT_SYMBOLS = { ...DEFAULT_SHORTCUTS };
+  saveShortcuts(SHORTCUT_SYMBOLS);
+  closeModal();
+  refreshShortcutBar();
+  toast('기본값으로 초기화됐습니다.');
+}
+
+function refreshShortcutBar() {
+  const bar = document.getElementById('shortcut-bar');
+  if (!bar) return;
+  bar.innerHTML = '';
+
+  // 라벨
+  const lbl = document.createElement('span');
+  lbl.style.cssText = 'font-size:10px;font-weight:700;color:var(--muted);margin-right:4px;letter-spacing:.5px;flex-shrink:0';
+  lbl.textContent = '단축키';
+  bar.appendChild(lbl);
+
+  // 기호 버튼
+  const keys = ['1','2','3','4','5','6','7','8','9','0'];
+  keys.forEach(k => {
+    const sym = SHORTCUT_SYMBOLS[k];
+    if (!sym) return;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.title = 'Ctrl+' + k;
+    btn.style.cssText = 'display:inline-flex;align-items:center;gap:2px;background:var(--white);border:1px solid var(--border);border-radius:5px;padding:3px 8px;font-size:15px;color:var(--ink);cursor:pointer;font-family:"Noto Serif KR",serif;line-height:1';
+    const small = document.createElement('span');
+    small.style.cssText = 'font-size:9px;color:var(--muted);margin-right:2px;font-family:"Noto Sans KR",sans-serif';
+    small.textContent = '^' + k;
+    const symSpan = document.createElement('span');
+    symSpan.textContent = sym;
+    btn.appendChild(small);
+    btn.appendChild(symSpan);
+    btn.addEventListener('click', () => insertSymbol(sym));
+    bar.appendChild(btn);
+  });
+
+  // 인디케이터
+  const ind = document.createElement('span');
+  ind.id = 'shortcut-indicator';
+  ind.style.cssText = 'font-size:22px;font-weight:700;color:var(--gold);opacity:0;transition:opacity .3s;min-width:28px;text-align:center';
+  bar.appendChild(ind);
+
+  // 설정 버튼
+  const cfg = document.createElement('button');
+  cfg.type = 'button';
+  cfg.textContent = '⚙ 단축키 설정';
+  cfg.style.cssText = 'margin-left:auto;flex-shrink:0;background:transparent;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;font-family:"Noto Sans KR",sans-serif';
+  cfg.addEventListener('click', showShortcutSettings);
+  bar.appendChild(cfg);
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// 원고 설정 & 미리보기
+// ═══════════════════════════════════════════════════════════
+const MS_PRESETS = [
+  {
+    id: 'kakao', name: '카카오페이지', icon: '🟡',
+    desc: '모바일 최적화 · 짧은 호흡',
+    width: 360, font: 'Noto Serif KR', size: 16, line: 1.9,
+    padH: 20, padV: 24, charsPerLine: 20, linesPerPage: 22,
+  },
+  {
+    id: 'ridi', name: '리디', icon: '📗',
+    desc: '전자책 리더 최적화',
+    width: 420, font: 'Noto Serif KR', size: 17, line: 1.85,
+    padH: 28, padV: 32, charsPerLine: 23, linesPerPage: 20,
+  },
+  {
+    id: 'joara', name: '조아라', icon: '📘',
+    desc: 'PC/모바일 범용',
+    width: 680, font: 'Noto Sans KR', size: 15, line: 1.8,
+    padH: 40, padV: 40, charsPerLine: 38, linesPerPage: 25,
+  },
+  {
+    id: 'munpia', name: '문피아', icon: '📙',
+    desc: 'PC 웹 최적화',
+    width: 720, font: 'Noto Sans KR', size: 15, line: 1.8,
+    padH: 48, padV: 40, charsPerLine: 40, linesPerPage: 25,
+  },
+  {
+    id: 'naver', name: '네이버 시리즈', icon: '🟢',
+    desc: '모바일 앱 최적화',
+    width: 375, font: 'Noto Serif KR', size: 16, line: 1.9,
+    padH: 18, padV: 24, charsPerLine: 20, linesPerPage: 22,
+  },
+  {
+    id: 'custom', name: '직접 설정', icon: '⚙️',
+    desc: '너비·글꼴·크기 직접 지정',
+    width: 480, font: 'Noto Serif KR', size: 16, line: 1.85,
+    padH: 24, padV: 28, charsPerLine: 26, linesPerPage: 22,
+  },
+];
+
+function getMsConfig(p) {
+  return p.msConfig || { presetId: 'kakao', ...MS_PRESETS[0] };
+}
+
+function renderManuscript() {
+  const p = getProject();
+  const cfg = getMsConfig(p);
+  const preset = MS_PRESETS.find(pr => pr.id === cfg.presetId) || MS_PRESETS[0];
+  const chapters = p.chapters || [];
+
+  document.getElementById('main').innerHTML = `
+    <div style="max-width:900px;margin:0 auto">
+      <div class="font-display" style="font-size:22px;margin-bottom:22px">원고 설정</div>
+
+      <!-- 플랫폼 프리셋 -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="sec-title">플랫폼 선택</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px" id="ms-preset-group">
+          ${MS_PRESETS.map(pr => {
+            const sel = cfg.presetId === pr.id;
+            return `<button type="button" onclick="selectMsPreset('${pr.id}')"
+              data-val="${pr.id}"
+              style="padding:12px 10px;border:2px solid ${sel?'var(--gold)':'var(--border)'};
+                border-radius:10px;cursor:pointer;text-align:center;
+                background:${sel?'var(--gold-light)':'var(--white)'};transition:all .15s;
+                font-family:'Noto Sans KR',sans-serif">
+              <div style="font-size:22px;margin-bottom:4px">${pr.icon}</div>
+              <div style="font-size:13px;font-weight:700;color:${sel?'var(--gold)':'var(--ink)'}">${pr.name}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">${pr.desc}</div>
+            </button>`;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- 세부 설정 -->
+      <div class="card" style="margin-bottom:16px" id="ms-detail">
+        <div class="sec-title">세부 설정
+          ${cfg.presetId !== 'custom' ? '<span style="font-size:10px;color:var(--muted);font-weight:400;margin-left:6px">직접 설정 선택 시 수정 가능</span>' : ''}
+        </div>
+        <div class="form-grid">
+          <div><label class="label">너비 (px)</label>
+            <input type="number" id="ms-width" value="${cfg.width||480}" ${cfg.presetId!=='custom'?'readonly style="opacity:.6"':''}
+              onchange="updateMsConfig('width',+this.value)"></div>
+          <div><label class="label">글꼴</label>
+            <select id="ms-font" ${cfg.presetId!=='custom'?'disabled style="opacity:.6"':''}
+              onchange="updateMsConfig('font',this.value)">
+              ${['Noto Serif KR','Noto Sans KR','나눔명조','나눔고딕'].map(f=>
+                `<option value="${f}" ${(cfg.font||'Noto Serif KR')===f?'selected':''}>${f}</option>`
+              ).join('')}
+            </select>
+          </div>
+          <div><label class="label">글자 크기 (px)</label>
+            <input type="number" id="ms-size" value="${cfg.size||16}" min="12" max="24" ${cfg.presetId!=='custom'?'readonly style="opacity:.6"':''}
+              onchange="updateMsConfig('size',+this.value)"></div>
+          <div><label class="label">줄 간격</label>
+            <input type="number" id="ms-line" value="${cfg.line||1.85}" min="1.4" max="2.5" step="0.05" ${cfg.presetId!=='custom'?'readonly style="opacity:.6"':''}
+              onchange="updateMsConfig('line',+this.value)"></div>
+          <div><label class="label">좌우 여백 (px)</label>
+            <input type="number" id="ms-padH" value="${cfg.padH||24}" ${cfg.presetId!=='custom'?'readonly style="opacity:.6"':''}
+              onchange="updateMsConfig('padH',+this.value)"></div>
+          <div><label class="label">상하 여백 (px)</label>
+            <input type="number" id="ms-padV" value="${cfg.padV||28}" ${cfg.presetId!=='custom'?'readonly style="opacity:.6"':''}
+              onchange="updateMsConfig('padV',+this.value)"></div>
+        </div>
+      </div>
+
+      <!-- 미리보기 -->
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <div class="sec-title" style="margin:0">미리보기</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <select id="ms-ch-select" onchange="updateMsPreview()" style="width:140px;font-size:12px;padding:5px 8px">
+              ${chapters.length===0
+                ? '<option>화가 없습니다</option>'
+                : chapters.map((c,i)=>`<option value="${i}">${esc(c.title)}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div style="overflow-x:auto;padding:8px 0">
+          <div id="ms-preview-wrap" style="margin:0 auto;transition:all .3s"></div>
+        </div>
+      </div>
+    </div>`;
+
+  updateMsPreview();
+}
+
+function selectMsPreset(id) {
+  const p = getProject();
+  const preset = MS_PRESETS.find(pr => pr.id === id) || MS_PRESETS[0];
+  p.msConfig = { ...preset, presetId: id };
+  autoSave();
+  renderManuscript();
+}
+
+function updateMsConfig(key, val) {
+  const p = getProject();
+  if (!p.msConfig) p.msConfig = { presetId:'custom', ...MS_PRESETS[5] };
+  p.msConfig[key] = val;
+  autoSave();
+  updateMsPreview();
+}
+
+function updateMsPreview() {
+  const p = getProject();
+  const cfg = getMsConfig(p);
+  const chapters = p.chapters || [];
+  const selEl = document.getElementById('ms-ch-select');
+  const chIdx = selEl ? parseInt(selEl.value) || 0 : 0;
+  const ch = chapters[chIdx];
+  const wrap = document.getElementById('ms-preview-wrap');
+  if (!wrap) return;
+
+  const text = ch ? (ch.content || '(내용 없음)') : '(화를 먼저 추가하세요)';
+  const title = ch ? ch.title : '';
+  // 첫 500자만 미리보기
+  const preview = text.length > 500 ? text.slice(0, 500) + '…' : text;
+  const totalChars = text.length;
+  const charsPerPage = (cfg.charsPerLine||24) * (cfg.linesPerPage||22);
+  const totalPages = Math.ceil(totalChars / charsPerPage);
+
+  wrap.style.width = (cfg.width || 480) + 'px';
+  wrap.innerHTML = `
+    <div class="ms-preview" style="width:${cfg.width||480}px;
+      --ms-pad-h:${cfg.padH||24}px;--ms-pad-v:${cfg.padV||28}px;
+      --ms-font:'${cfg.font||'Noto Serif KR'}';--ms-size:${cfg.size||16}px;
+      --ms-line:${cfg.line||1.85};--ms-height:auto;">
+      <div class="ms-header">
+        <span>${esc(p.title||'제목 없음')}</span>
+        <span>${esc(title)} · ${totalChars.toLocaleString()}자 · 약 ${totalPages}페이지</span>
+      </div>
+      <div class="ms-page">${esc(preview)}</div>
+      ${text.length > 500 ? `<div style="text-align:center;padding:10px;font-size:12px;color:var(--muted);background:#fafafa;border-top:1px solid #eee">미리보기는 500자까지 표시됩니다</div>` : ''}
+    </div>`;
+}
+
 // ═══════════════════════════════════════════════════════════════
 // MODAL SYSTEM
 // ═══════════════════════════════════════════════════════════════
@@ -2408,6 +2914,26 @@ document.addEventListener('keydown', e => {
     if (p) { exportData(); } else { toast('저장할 작품을 먼저 열어주세요.'); }
   }
 });
+
+
+// ═══════════════════════════════════════════════════════════
+// 단축키 초기화
+// ═══════════════════════════════════════════════════════════
+const DEFAULT_SHORTCUTS = {
+  '1': '“', '2': '”', '3': '‘', '4': '’',
+  '5': '…', '6': '·', '7': '—',
+  '8': '《', '9': '》', '0': '「',
+};
+function loadShortcuts() {
+  try {
+    const s = localStorage.getItem('wnstudio_shortcuts');
+    return s ? JSON.parse(s) : {...DEFAULT_SHORTCUTS};
+  } catch { return {...DEFAULT_SHORTCUTS}; }
+}
+function saveShortcuts(map) {
+  localStorage.setItem('wnstudio_shortcuts', JSON.stringify(map));
+}
+let SHORTCUT_SYMBOLS = loadShortcuts();
 
 // ═══════════════════════════════════════════════════════════════
 // INIT
