@@ -1805,6 +1805,17 @@ function setupDiagramEvents() {
     const id = nodeEl.dataset.id;
     const {x, y} = xy(e);
 
+    // 더블탭 감지 (nodeStart 시점에 카운트)
+    if (tapId === id && tapTimer) {
+      clearTimeout(tapTimer); tapTimer = null; tapId = null;
+      showEditNodeModal(id);
+      return;
+    } else {
+      tapId = id;
+      clearTimeout(tapTimer);
+      tapTimer = setTimeout(() => { tapTimer = null; tapId = null; }, 400);
+    }
+
     // 드래그 offset 계산을 위해 node 미리 찾기
     const dg0   = getActiveDiagram();
     const node0 = (dg0?.nodes||[]).find(n => n.id === id);
@@ -1872,16 +1883,7 @@ function setupDiagramEvents() {
   function nodeEnd(e) {
     clearTimeout(longTimer);
     if (drag) {
-      // 거의 안 움직였으면 → 더블탭 감지
-      if (!moved) {
-        if (tapId === drag.id && tapTimer) {
-          clearTimeout(tapTimer); tapTimer = null; tapId = null;
-          showEditNodeModal(drag.id);   // 더블탭 → 편집
-        } else {
-          tapId = drag.id;
-          tapTimer = setTimeout(() => { tapTimer = null; tapId = null; }, 500);
-        }
-      } else {
+      if (moved) {
         saveDiagram();
       }
       const el = document.getElementById('node-' + drag.id);
