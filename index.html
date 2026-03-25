@@ -1347,17 +1347,7 @@ function renderChapters() {
             <div>화를 선택하거나 새로 추가하세요</div>
           </div>`}
       </div>
-      <div id="split-panel" class="hidden">
-        <div class="split-panel-tabs" id="split-tabs" style="overflow-x:auto;flex-wrap:nowrap">
-          <button class="split-tab active" onclick="switchSplitTab('overview')">📋 개요</button>
-          <button class="split-tab" onclick="switchSplitTab('characters')">👤 인물</button>
-          <button class="split-tab" onclick="switchSplitTab('plot')">📐 플롯</button>
-          <button class="split-tab" onclick="switchSplitTab('world')">🌍 세계관</button>
-          <button class="split-tab" onclick="switchSplitTab('diagram')">🔗 다이어그램</button>
-          <button class="split-tab" onclick="switchSplitTab('memo')">📝 메모</button>
-        </div>
-        <div class="split-panel-content" id="split-content"></div>
-      </div>
+
     </div>`;
   setTimeout(() => { refreshShortcutBar(); applyEditorFontSize(); }, 0);
 }
@@ -1391,9 +1381,22 @@ function renderEditorContent(ch) {
       <div class="symbol-palette" id="symbol-palette" style="display:none;flex-wrap:wrap;"></div>
     </div>
     <div id="shortcut-bar" style="padding:6px 12px;background:var(--cream);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:4px;flex-wrap:wrap;flex-shrink:0;"></div>
-        <div class="editor-content">
-      <textarea id="prose-editor" placeholder="이야기를 시작하세요..."
-        oninput="onEditorInput('${ch.id}',this.value)">${esc(ch.content||'')}</textarea>
+    <div style="display:flex;flex:1;overflow:hidden;">
+      <div class="editor-content" style="flex:1;overflow-y:auto;">
+        <textarea id="prose-editor" placeholder="이야기를 시작하세요..."
+          oninput="onEditorInput('${ch.id}',this.value)">${esc(ch.content||'')}</textarea>
+      </div>
+      <div id="split-panel" class="hidden">
+        <div class="split-panel-tabs" id="split-tabs" style="overflow-x:auto;flex-wrap:nowrap">
+          <button class="split-tab active" onclick="switchSplitTab('overview')">📋 개요</button>
+          <button class="split-tab" onclick="switchSplitTab('characters')">👤 인물</button>
+          <button class="split-tab" onclick="switchSplitTab('plot')">📐 플롯</button>
+          <button class="split-tab" onclick="switchSplitTab('world')">🌍 세계관</button>
+          <button class="split-tab" onclick="switchSplitTab('diagram')">🔗 다이어그램</button>
+          <button class="split-tab" onclick="switchSplitTab('memo')">📝 메모</button>
+        </div>
+        <div class="split-panel-content" id="split-content"></div>
+      </div>
     </div>`;
 }
 
