@@ -829,7 +829,7 @@ function renderHome() {
         <div class="project-card-synopsis">${esc(p.synopsis||'줄거리가 없습니다.')}</div>
         <div class="project-card-footer">
           <span class="project-card-meta">${(p.chapters||[]).length}화 · ${wordCount.toLocaleString()}자</span>
-          <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteProject('${p.id}')">
+          <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteProject('${p.id || ''}')">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
             삭제
           </button>
@@ -848,10 +848,7 @@ function renderHome() {
         <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
           <div style="font-size:13px;color:var(--muted)">${projects.length}개의 작품</div>
           <div id="storage-indicator" style="display:flex;align-items:center;gap:8px"></div>
-      <button onclick="cleanEmptyProjects()" 
-        style="font-size:11px;padding:3px 8px;background:transparent;border:1px solid var(--border);
-          border-radius:6px;cursor:pointer;color:var(--muted);font-family:'Noto Sans KR',sans-serif"
-        title="제목 없음 등 빈 작품 삭제">🧹 빈 작품 정리</button>
+
         </div>
         <div style="display:flex;gap:10px">
           <button class="btn btn-outline btn-sm" onclick="document.getElementById('import-file').click()">
@@ -881,10 +878,20 @@ function renderHome() {
 
 function deleteProject(id) {
   confirmDialog('이 작품을 삭제합니다. 복구할 수 없습니다.', () => {
-  state.projects = state.projects.filter(p => p.id !== id);
-  saveToStorage();
-  renderHome();
-  toast('작품이 삭제되었습니다.');
+    if (id === undefined || id === null || id === 'undefined') {
+      // id 없는 빈 작품 모두 제거
+      state.projects = state.projects.filter(p =>
+        p.id && p.id !== 'undefined' &&
+        ((p.title && p.title !== '제목 없음') ||
+         (p.chapters && p.chapters.some(c => c.content && c.content.trim())) ||
+         (p.characters && p.characters.length > 0))
+      );
+    } else {
+      state.projects = state.projects.filter(p => p.id !== id);
+    }
+    saveToStorage();
+    renderHome();
+    toast('작품이 삭제되었습니다.');
   });
 }
 
