@@ -3328,61 +3328,126 @@ function renderSplitContent() {
 
   if (splitTab === 'overview') {
     el.innerHTML = `
-      <div style="font-weight:700;font-size:15px;margin-bottom:12px;color:var(--gold)">${esc(p.title||'제목 없음')}</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:4px">장르</div>
-      <div style="margin-bottom:12px;font-size:13px">${esc(p.genre||'-')}</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:4px">상태</div>
-      <div style="margin-bottom:12px;font-size:13px">${esc(p.status||'-')}</div>
-      <div style="font-size:12px;color:var(--muted);margin-bottom:4px">줄거리</div>
-      <div style="font-size:13px;line-height:1.8;white-space:pre-wrap">${esc(p.synopsis||'줄거리가 없습니다.')}</div>
+      <div style="margin-bottom:14px">
+        <label class="label">작품 제목</label>
+        <input value="${esc(p.title||'')}" oninput="updateSplitField('title',this.value)"
+          style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-weight:700;background:var(--white);color:var(--ink)">
+      </div>
+      <div style="margin-bottom:14px">
+        <label class="label">장르</label>
+        <select onchange="updateSplitField('genre',this.value)"
+          style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--white);color:var(--ink)">
+          ${selOpts(GENRES, p.genre||'판타지')}
+        </select>
+      </div>
+      <div style="margin-bottom:14px">
+        <label class="label">상태</label>
+        <select onchange="updateSplitField('status',this.value)"
+          style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--white);color:var(--ink)">
+          ${selOpts(STATUSES, p.status||'기획중')}
+        </select>
+      </div>
+      <div style="margin-bottom:14px">
+        <label class="label">줄거리</label>
+        <textarea oninput="updateSplitField('synopsis',this.value)"
+          rows="8" placeholder="작품의 전체 줄거리를 입력하세요..."
+          style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;line-height:1.8;background:var(--white);color:var(--ink);resize:vertical">${esc(p.synopsis||'')}</textarea>
+      </div>
+      <div>
+        <label class="label">메모</label>
+        <textarea oninput="updateSplitField('memo',this.value)"
+          rows="4" placeholder="작가 메모..."
+          style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;line-height:1.8;background:var(--white);color:var(--ink);resize:vertical">${esc(p.memo||'')}</textarea>
+      </div>
     `;
+
   } else if (splitTab === 'characters') {
     const chars = p.characters || [];
-    if (!chars.length) { el.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px">등록된 캐릭터가 없어요</div>'; return; }
-    el.innerHTML = chars.map(c => `
-      <div style="padding:10px;border:1px solid var(--border);border-radius:10px;margin-bottom:10px;background:var(--white)">
-        <div style="font-weight:700;font-size:14px;margin-bottom:4px">${esc(c.name)}</div>
-        ${c.role ? `<span style="font-size:11px;background:var(--gold-light);color:var(--gold);padding:2px 8px;border-radius:20px;font-weight:600">${esc(c.role)}</span>` : ''}
-        ${c.personality ? `<div style="font-size:12px;color:var(--muted);margin-top:6px">${esc(c.personality)}</div>` : ''}
+    if (!chars.length) {
+      el.innerHTML = `<div style="text-align:center;padding:30px 0">
+        <div style="font-size:32px;margin-bottom:8px">👤</div>
+        <div style="color:var(--muted);font-size:13px;margin-bottom:12px">등록된 캐릭터가 없어요</div>
+        <button class="btn btn-gold btn-sm" onclick="showCharModal()">＋ 캐릭터 추가</button>
+      </div>`;
+      return;
+    }
+    el.innerHTML = `
+      <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+        <button class="btn btn-gold btn-sm" onclick="showCharModal()">＋ 추가</button>
       </div>
-    `).join('');
+      ${chars.map((c,i) => `
+        <div style="border:1px solid var(--border);border-radius:10px;margin-bottom:12px;overflow:hidden;background:var(--white)">
+          <div style="padding:10px 12px;background:var(--cream);display:flex;justify-content:space-between;align-items:center">
+            <span style="font-weight:700;font-size:14px">${esc(c.name)}</span>
+            <div style="display:flex;gap:6px">
+              <button onclick="showCharModal(${i})" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--teal)">✏️ 편집</button>
+            </div>
+          </div>
+          <div style="padding:10px 12px">
+            ${c.role ? `<div style="margin-bottom:6px"><span style="font-size:10px;color:var(--muted)">역할</span><div style="font-size:13px">${esc(c.role)}</div></div>` : ''}
+            ${c.personality ? `<div style="margin-bottom:6px"><span style="font-size:10px;color:var(--muted)">성격</span><div style="font-size:13px">${esc(c.personality)}</div></div>` : ''}
+            ${c.background ? `<div><span style="font-size:10px;color:var(--muted)">배경</span><div style="font-size:13px">${esc(c.background)}</div></div>` : ''}
+          </div>
+        </div>`).join('')}`;
+
   } else if (splitTab === 'plot') {
     const arcs = p.arcs || [];
-    if (!arcs.length) { el.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px">등록된 아크가 없어요</div>'; return; }
-    el.innerHTML = arcs.map(a => `
-      <div style="margin-bottom:14px">
-        <div style="font-weight:700;font-size:13px;color:var(--gold);margin-bottom:6px">${esc(a.title)}</div>
-        ${(a.scenes||[]).map((s,i) => `
-          <div style="padding:6px 10px;border-left:2px solid var(--border);margin-bottom:4px;font-size:12px">
-            <span style="color:var(--muted)">#${i+1}</span> ${esc(s.title)}
-            ${s.summary ? `<div style="color:var(--muted);font-size:11px;margin-top:2px">${esc(s.summary)}</div>` : ''}
+    if (!arcs.length) {
+      el.innerHTML = `<div style="text-align:center;padding:30px 0">
+        <div style="font-size:32px;margin-bottom:8px">📐</div>
+        <div style="color:var(--muted);font-size:13px">등록된 아크가 없어요</div>
+      </div>`;
+      return;
+    }
+    el.innerHTML = arcs.map((a,ai) => `
+      <div style="margin-bottom:16px">
+        <div style="font-weight:700;font-size:13px;color:var(--gold);margin-bottom:6px;padding:6px 10px;background:var(--gold-light);border-radius:8px">${esc(a.title)}</div>
+        ${(a.scenes||[]).map((s,si) => `
+          <div style="padding:8px 10px;border-left:2px solid var(--border);margin-bottom:6px;background:var(--white);border-radius:0 8px 8px 0">
+            <div style="font-size:12px;font-weight:600;margin-bottom:4px"><span style="color:var(--muted)">#${si+1}</span> ${esc(s.title)}</div>
+            ${s.summary ? `<div style="font-size:11px;color:var(--muted);line-height:1.6">${esc(s.summary)}</div>` : ''}
           </div>`).join('')}
-      </div>
-    `).join('');
+      </div>`).join('');
+
   } else if (splitTab === 'world') {
     const worlds = p.worldSettings || [];
-    if (!worlds.length) { el.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px">세계관 설정이 없어요</div>'; return; }
-    // 카테고리별 그룹핑
+    if (!worlds.length) {
+      el.innerHTML = `<div style="text-align:center;padding:30px 0">
+        <div style="font-size:32px;margin-bottom:8px">🌍</div>
+        <div style="color:var(--muted);font-size:13px;margin-bottom:12px">세계관 설정이 없어요</div>
+        <button class="btn btn-gold btn-sm" onclick="showWorldModal()">＋ 설정 추가</button>
+      </div>`;
+      return;
+    }
     const groups = {};
-    worlds.forEach(w => {
+    worlds.forEach((w,i) => {
       const cat = w.category || '기타';
       if (!groups[cat]) groups[cat] = [];
-      groups[cat].push(w);
+      groups[cat].push({...w, _i:i});
     });
-    el.innerHTML = Object.entries(groups).map(([cat, items]) => `
-      <div style="margin-bottom:16px">
-        <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1px;margin-bottom:6px;text-transform:uppercase">${esc(cat)}</div>
-        ${items.map(w => `
-          <div style="padding:10px 12px;border:1px solid var(--border);border-radius:10px;margin-bottom:8px;background:var(--white)">
-            <div style="font-weight:700;font-size:13px;margin-bottom:4px">${esc(w.title)}</div>
-            <div style="font-size:12px;color:var(--muted);line-height:1.7;white-space:pre-wrap">${esc(w.content||'')}</div>
-          </div>`).join('')}
+    el.innerHTML = `
+      <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+        <button class="btn btn-gold btn-sm" onclick="showWorldModal()">＋ 추가</button>
       </div>
-    `).join('');
+      ${Object.entries(groups).map(([cat, items]) => `
+        <div style="margin-bottom:16px">
+          <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1px;margin-bottom:6px">${esc(cat)}</div>
+          ${items.map(w => `
+            <div style="border:1px solid var(--border);border-radius:10px;margin-bottom:8px;overflow:hidden;background:var(--white)">
+              <div style="padding:8px 12px;background:var(--cream);display:flex;justify-content:space-between;align-items:center">
+                <span style="font-weight:700;font-size:13px">${esc(w.title)}</span>
+                <button onclick="showWorldModal(${w._i})" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--teal)">✏️</button>
+              </div>
+              <div style="padding:8px 12px;font-size:12px;color:var(--muted);line-height:1.7;white-space:pre-wrap">${esc(w.content||'')}</div>
+            </div>`).join('')}
+        </div>`).join('')}`;
+
   } else if (splitTab === 'diagram') {
     const diagrams = p.diagrams || [];
-    if (!diagrams.length) { el.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px">다이어그램이 없어요</div>'; return; }
-    // 다이어그램 목록 + 노드/엣지 텍스트 요약
+    if (!diagrams.length) {
+      el.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px">다이어그램이 없어요</div>';
+      return;
+    }
     el.innerHTML = diagrams.map(dg => `
       <div style="margin-bottom:16px;border:1px solid var(--border);border-radius:10px;overflow:hidden">
         <div style="padding:8px 12px;background:var(--cream);font-weight:700;font-size:13px;color:var(--gold)">${esc(dg.title||'다이어그램')}</div>
@@ -3390,7 +3455,7 @@ function renderSplitContent() {
           ${(dg.nodes||[]).length === 0 ? '<div style="color:var(--muted);font-size:12px">노드 없음</div>' :
             (dg.nodes||[]).map(n => `
               <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px">
-                <span style="font-size:14px">${(DG_TYPES.find(t=>t.id===n.type)||DG_TYPES[0]).icon}</span>
+                <span>${(DG_TYPES.find(t=>t.id===n.type)||DG_TYPES[0]).icon}</span>
                 <span style="font-weight:600">${esc(n.label)}</span>
                 ${n.sub ? `<span style="color:var(--muted)">${esc(n.sub)}</span>` : ''}
               </div>`).join('')}
@@ -3400,25 +3465,42 @@ function renderSplitContent() {
               const fn = (dg.nodes||[]).find(n=>n.id===e.from);
               const tn = (dg.nodes||[]).find(n=>n.id===e.to);
               if (!fn||!tn) return '';
-              const arrow = e.dir==='both' ? '↔' : e.dir==='none' ? '—' : '→';
-              return `<div style="font-size:11px;padding:3px 0;color:var(--ink)">
-                ${esc(fn.label)} ${arrow} ${esc(tn.label)}
-                ${e.label ? `<span style="color:var(--muted)">(${esc(e.label)})</span>` : ''}
-              </div>`;
+              const arrow = e.dir==='both'?'↔':e.dir==='none'?'—':'→';
+              return `<div style="font-size:11px;padding:3px 0">${esc(fn.label)} ${arrow} ${esc(tn.label)}${e.label?` <span style="color:var(--muted)">(${esc(e.label)})</span>`:''}</div>`;
             }).join('')}` : ''}
         </div>
-      </div>
-    `).join('');
+      </div>`).join('');
+
   } else if (splitTab === 'memo') {
     const memos = p.memos || [];
-    if (!memos.length) { el.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px">메모가 없어요</div>'; return; }
-    el.innerHTML = memos.map(m => `
-      <div style="padding:10px 12px;border-radius:10px;margin-bottom:10px;font-size:13px;line-height:1.7;
-        background:${m.color||'#fff8e1'};border:1px solid rgba(0,0,0,.08);white-space:pre-wrap">
-        ${esc(m.text||'')}
-      </div>
-    `).join('');
+    if (!memos.length) {
+      el.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px">메모가 없어요</div>';
+      return;
+    }
+    el.innerHTML = memos.map((m,i) => `
+      <div style="margin-bottom:10px;border-radius:10px;overflow:hidden;border:1px solid rgba(0,0,0,.08)">
+        <textarea oninput="updateSplitMemo(${i},this.value)" rows="4"
+          style="width:100%;padding:10px 12px;font-size:13px;line-height:1.7;
+            background:${m.color||'#fff8e1'};border:none;outline:none;resize:vertical;
+            font-family:'Noto Serif KR',serif;color:var(--ink)">${esc(m.text||'')}</textarea>
+      </div>`).join('');
   }
+}
+
+// 참고 패널에서 작품 기본 정보 수정
+function updateSplitField(key, val) {
+  const p = getProject();
+  if (!p) return;
+  p[key] = val;
+  autoSave();
+}
+
+// 참고 패널에서 메모 수정
+function updateSplitMemo(idx, val) {
+  const p = getProject();
+  if (!p || !p.memos) return;
+  p.memos[idx].text = val;
+  autoSave();
 }
 
 
