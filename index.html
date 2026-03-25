@@ -3804,267 +3804,86 @@ function changeFontSize(delta) {
 
 
 // ═══════════════════════════════════════════════════════════
-// File System Access API - 로컬 파일 자동저장
+// 자동 저장 (고정 파일명 다운로드 방식)
 // ═══════════════════════════════════════════════════════════
-let fsFileHandle = null;  // 현재 연결된 파일 핸들
 let fsAutoSaveEnabled = false;
+let fsFileHandle = null; // 호환성 유지용 (미사용)
+const FS_SUPPORTED = true; // 항상 지원
 
-const FS_SUPPORTED = 'showSaveFilePicker' in window;
-
-// 파일 연결 (새 파일 또는 기존 파일 열기)
-async function fsConnect() {
-  if (!FS_SUPPORTED) {
-    toast('이 브라우저는 파일 자동저장을 지원하지 않아요. Chrome을 사용해주세요.');
-    return;
-  }
-  try {
-    // 기존 파일 열기 or 새 파일 만들기 선택
-    const choice = await showFsChoiceModal();
-    if (!choice) return;
-
-    if (choice === 'open') {
-      const [handle] = await window.showOpenFilePicker({
-        types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }],
-      });
-      fsFileHandle = handle;
-      // 파일 내용 불러오기
-      const file = await handle.getFile();
-      const text = await file.text();
-      const data = JSON.parse(text);
-      const projects = data.projects || (Array.isArray(data) ? data : null);
-      if (projects) {
-        state.projects = projects;
-        saveToStorage();
-        await saveFsHandle(handle);
-        renderHome();
-        toast('✓ 파일을 불러왔어요! (' + projects.length + '개 작품)');
-      } else {
-        toast('⚠️ 올바른 웹소설 스튜디오 파일이 아니에요.');
-      }
-    } else {
-      fsFileHandle = await window.showSaveFilePicker({
-        suggestedName: 'wnstudio-backup.json',
-        types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }],
-      });
-      await saveFsHandle(fsFileHandle);
-      await fsSave();
-      toast('✓ 파일이 연결됐어요! 이제 Ctrl+S로 자동저장돼요.');
-    }
-
-    fsAutoSaveEnabled = true;
-    updateFsStatus();
-  } catch (e) {
-    if (e.name !== 'AbortError') toast('파일 연결 실패: ' + e.message);
-  }
-}
-
-// 파일에 저장
-async function fsSave() {
-  if (!fsFileHandle) return false;
+function fsSaveAsDownload() {
   try {
     const data = { projects: state.projects, version: '2.0', savedAt: new Date().toISOString() };
     const json = JSON.stringify(data, null, 2);
     const blob = new Blob([json], { type: 'application/json' });
-
-    // 방법 1: createWritable (데스크탑 Chrome)
-    try {
-      const writable = await fsFileHandle.createWritable();
-      await writable.write(blob);
-      await writable.close();
-      return true;
-    } catch(e1) {
-      // 방법 2: FileSystemWritableFileStream with string (Android Chrome)
-      try {
-        const writable2 = await fsFileHandle.createWritable({ keepExistingData: false });
-        await writable2.write({ type: 'write', data: json });
-        await writable2.close();
-        return true;
-      } catch(e2) {
-        console.error('fsSave e1:', e1, 'e2:', e2);
-        throw e2;
-      }
-    }
-  } catch (e) {
-    console.error('fsSave error:', e);
-    toast('⚠️ 파일 저장 오류: ' + e.message);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'wnstudio-autosave.json';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return true;
+  } catch(e) {
+    console.error('fsSaveAsDownload error:', e);
     return false;
   }
 }
 
-// 연결 해제
-function fsDisconnect() {
-  fsFileHandle = null;
-  fsAutoSaveEnabled = false;
-  clearFsHandle();
-  updateFsStatus();
-  toast('파일 연결이 해제됐어요.');
+async function fsSave() {
+  return fsSaveAsDownload();
 }
 
-// 상태 표시 업데이트
+function fsConnect() {
+  fsAutoSaveEnabled = true;
+  localStorage.setItem('wnstudio_autosave','on');
+  updateFsStatus();
+  fsSave();
+  toast('✓ 자동저장 켜짐! Ctrl+S마다 wnstudio-autosave.json 으로 저장돼요.');
+}
+
+function fsDisconnect() {
+  fsAutoSaveEnabled = false;
+  localStorage.removeItem('wnstudio_autosave');
+  updateFsStatus();
+  toast('자동저장이 꺼졌어요.');
+}
+
 function updateFsStatus() {
   const btn = document.getElementById('fs-status-btn');
   if (!btn) return;
-  if (fsAutoSaveEnabled && fsFileHandle) {
-    btn.textContent = '💾 ' + (fsFileHandle.name || '파일 연결됨');
+  if (fsAutoSaveEnabled) {
+    btn.textContent = '💾 자동저장 ON';
     btn.style.borderColor = 'var(--teal)';
     btn.style.color = 'var(--teal)';
-    btn.title = '클릭하면 연결 해제';
+    btn.title = '클릭하면 끄기';
     btn.onclick = fsDisconnect;
   } else {
-    btn.textContent = '💾 파일 연결';
+    btn.textContent = '💾 자동저장';
     btn.style.borderColor = '';
     btn.style.color = '';
-    btn.title = '로컬 파일에 자동저장';
+    btn.title = 'Ctrl+S 시 파일로 저장';
     btn.onclick = fsConnect;
   }
 }
 
-// 파일 선택 모달
-function showFsChoiceModal() {
-  return new Promise(resolve => {
-    const bg = document.createElement('div');
-    bg.style.cssText = 'position:fixed;inset:0;background:rgba(24,18,10,.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
-    bg.innerHTML = `
-      <div style="background:var(--paper);border:1px solid var(--border);border-radius:16px;
-        padding:28px;width:320px;box-shadow:0 20px 60px rgba(0,0,0,.3)">
-        <div style="font-family:'Black Han Sans',sans-serif;font-size:18px;color:var(--gold);margin-bottom:8px">💾 파일 연결</div>
-        <p style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:20px">
-          로컬 파일에 직접 저장하면 브라우저 캐시와 무관하게 안전하게 보관돼요.
-        </p>
-        <div style="display:flex;flex-direction:column;gap:10px">
-          <button onclick="this.closest('div[style*=fixed]').remove();window._fsResolve('new')"
-            style="padding:12px;background:var(--gold);color:#fff;border:none;border-radius:10px;
-              font-size:14px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif">
-            📄 새 파일 만들기
-          </button>
-          <button onclick="this.closest('div[style*=fixed]').remove();window._fsResolve('open')"
-            style="padding:12px;background:transparent;color:var(--ink);border:1.5px solid var(--border);
-              border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif">
-            📂 기존 파일 불러오기
-          </button>
-          <button onclick="this.closest('div[style*=fixed]').remove();window._fsResolve(null)"
-            style="padding:8px;background:transparent;color:var(--muted);border:none;
-              font-size:13px;cursor:pointer;font-family:'Noto Sans KR',sans-serif">
-            취소
-          </button>
-        </div>
-      </div>`;
-    window._fsResolve = resolve;
-    document.body.appendChild(bg);
-  });
-}
-
-
 // ═══════════════════════════════════════════════════════════
-// 파일 핸들 자동 재연결 (IndexedDB 사용)
+// 자동저장 상태 복원
 // ═══════════════════════════════════════════════════════════
-const FS_DB_NAME = 'wnstudio-fs';
-const FS_DB_STORE = 'handles';
-
-function openFsDb() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(FS_DB_NAME, 1);
-    req.onupgradeneeded = e => e.target.result.createObjectStore(FS_DB_STORE);
-    req.onsuccess = e => resolve(e.target.result);
-    req.onerror = reject;
-  });
-}
-
-async function saveFsHandle(handle) {
-  try {
-    const db = await openFsDb();
-    const tx = db.transaction(FS_DB_STORE, 'readwrite');
-    tx.objectStore(FS_DB_STORE).put(handle, 'lastHandle');
-  } catch(e) { console.log('핸들 저장 실패:', e); }
-}
-
-async function loadFsHandle() {
-  try {
-    const db = await openFsDb();
-    return new Promise((resolve) => {
-      const tx = db.transaction(FS_DB_STORE, 'readonly');
-      const req = tx.objectStore(FS_DB_STORE).get('lastHandle');
-      req.onsuccess = e => resolve(e.target.result || null);
-      req.onerror = () => resolve(null);
-    });
-  } catch(e) { return null; }
-}
-
+function openFsDb() { return Promise.resolve(null); }
+async function saveFsHandle() {}
+async function loadFsHandle() { return null; }
 async function clearFsHandle() {
-  try {
-    const db = await openFsDb();
-    const tx = db.transaction(FS_DB_STORE, 'readwrite');
-    tx.objectStore(FS_DB_STORE).delete('lastHandle');
-  } catch(e) {}
+  try { localStorage.removeItem('wnstudio_autosave'); } catch(e) {}
 }
 
-// 앱 시작 시 자동 재연결 시도
 async function tryAutoReconnect() {
-  if (!FS_SUPPORTED) return;
-  const handle = await loadFsHandle();
-  if (!handle) return;
-
-  try {
-    // 권한 확인 (팝업 없이 먼저 체크)
-    const perm = await handle.queryPermission({ mode: 'readwrite' });
-    if (perm === 'granted') {
-      // 이미 권한 있음 → 바로 연결
-      fsFileHandle = handle;
-      fsAutoSaveEnabled = true;
-      updateFsStatus();
-      toast('💾 ' + handle.name + ' 에 자동 연결됐어요');
-    } else if (perm === 'prompt') {
-      // 권한 요청 필요 → 배너로 안내
-      showFsReconnectBanner(handle);
-    }
-    // denied면 무시
-  } catch(e) {
-    await clearFsHandle();
+  // 이전 세션에서 자동저장이 켜져 있었으면 복원
+  if (localStorage.getItem('wnstudio_autosave') === 'on') {
+    fsAutoSaveEnabled = true;
+    updateFsStatus();
   }
 }
 
-// 재연결 안내 배너
-function showFsReconnectBanner(handle) {
-  const banner = document.createElement('div');
-  banner.id = 'fs-reconnect-banner';
-  banner.style.cssText = `
-    position:fixed;bottom:70px;left:50%;transform:translateX(-50%);
-    background:var(--ink);color:#fff;
-    padding:12px 20px;border-radius:30px;
-    font-size:13px;font-family:'Noto Sans KR',sans-serif;
-    display:flex;align-items:center;gap:12px;
-    box-shadow:0 4px 20px rgba(0,0,0,.3);z-index:9998;
-    white-space:nowrap;
-  `;
-  banner.innerHTML = `
-    <span>💾 <b>${handle.name}</b> 에 다시 연결할까요?</span>
-    <button onclick="fsReconnect()" style="background:var(--gold);color:#fff;border:none;
-      border-radius:20px;padding:5px 14px;cursor:pointer;font-weight:700;
-      font-family:'Noto Sans KR',sans-serif;font-size:12px">연결</button>
-    <button onclick="document.getElementById('fs-reconnect-banner')?.remove();clearFsHandle()"
-      style="background:transparent;color:rgba(255,255,255,.6);border:none;cursor:pointer;font-size:18px">×</button>
-  `;
-  document.body.appendChild(banner);
-  window._fsPendingHandle = handle;
-}
-
-async function fsReconnect() {
-  document.getElementById('fs-reconnect-banner')?.remove();
-  const handle = window._fsPendingHandle;
-  if (!handle) return;
-  try {
-    const perm = await handle.requestPermission({ mode: 'readwrite' });
-    if (perm === 'granted') {
-      fsFileHandle = handle;
-      fsAutoSaveEnabled = true;
-      await saveFsHandle(handle);
-      updateFsStatus();
-      toast('💾 ' + handle.name + ' 연결됐어요!');
-    }
-  } catch(e) {
-    toast('연결 실패: ' + e.message);
-  }
-}
+async function fsReconnect() {}
 
 // ═══════════════════════════════════════════════════════════════
 // INIT
