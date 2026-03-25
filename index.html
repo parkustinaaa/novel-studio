@@ -3863,15 +3863,30 @@ async function fsSave() {
   if (!fsFileHandle) return false;
   try {
     const data = { projects: state.projects, version: '2.0', savedAt: new Date().toISOString() };
-    const writable = await fsFileHandle.createWritable();
-    await writable.write(JSON.stringify(data, null, 2));
-    await writable.close();
-    return true;
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+
+    // 방법 1: createWritable (데스크탑 Chrome)
+    try {
+      const writable = await fsFileHandle.createWritable();
+      await writable.write(blob);
+      await writable.close();
+      return true;
+    } catch(e1) {
+      // 방법 2: FileSystemWritableFileStream with string (Android Chrome)
+      try {
+        const writable2 = await fsFileHandle.createWritable({ keepExistingData: false });
+        await writable2.write({ type: 'write', data: json });
+        await writable2.close();
+        return true;
+      } catch(e2) {
+        console.error('fsSave e1:', e1, 'e2:', e2);
+        throw e2;
+      }
+    }
   } catch (e) {
     console.error('fsSave error:', e);
-    fsFileHandle = null;
-    fsAutoSaveEnabled = false;
-    updateFsStatus();
+    toast('⚠️ 파일 저장 오류: ' + e.message);
     return false;
   }
 }
