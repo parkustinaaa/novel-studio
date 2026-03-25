@@ -390,6 +390,48 @@ button{cursor:pointer;font-family:'Noto Sans KR',sans-serif;border:none;border-r
   .editor-wrap { flex-direction:column; }
 }
 
+
+/* ═══ FOCUS MODE ═══════════════════════════════════════════ */
+#focus-overlay {
+  position:fixed;inset:0;z-index:1000;
+  display:none;flex-direction:column;
+  background:var(--paper);
+  animation:fadein .25s;
+}
+#focus-overlay.active { display:flex; }
+#focus-toolbar {
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 24px;flex-shrink:0;
+  opacity:0;transition:opacity .3s;
+  background:var(--paper);
+  border-bottom:1px solid var(--border);
+}
+#focus-toolbar { opacity:1 !important; }
+#focus-editor-wrap {
+  flex:1;overflow-y:auto;
+  display:flex;justify-content:center;
+  padding:40px 24px;
+}
+#focus-editor {
+  width:100%;max-width:680px;min-height:100%;
+  border:none;outline:none;
+  background:transparent;
+  font-family:'Noto Serif KR',serif;
+  font-size:var(--editor-font-size,16px);
+  line-height:2;color:var(--ink);
+  resize:none;
+}
+#focus-wordcount {
+  font-size:12px;color:var(--muted);
+}
+#focus-exit-btn {
+  background:transparent;border:1.5px solid var(--border);
+  border-radius:8px;padding:6px 14px;
+  font-size:12px;font-weight:700;cursor:pointer;
+  color:var(--muted);font-family:'Noto Sans KR',sans-serif;
+}
+#focus-exit-btn:hover { border-color:var(--gold);color:var(--gold); }
+
 /* ═══ RESPONSIVE ════════════════════════════════════════════ */
 @media (max-width: 520px) {
   header { padding:0 8px; gap:4px; }
@@ -1389,6 +1431,9 @@ function renderEditorContent(ch) {
         <span id="font-size-display" style="font-size:11px;color:var(--muted);min-width:28px;text-align:center;font-weight:600">16px</span>
         <button onclick="changeFontSize(1)" style="background:none;border:none;cursor:pointer;font-size:16px;color:var(--muted);padding:2px 4px;font-weight:700" title="글자 크게">＋</button>
       </div>
+      <button class="btn btn-outline btn-sm" onclick="enterFocusMode()" title="집중 모드" style="font-size:13px">
+        ⛶ 집중
+      </button>
       <button class="btn btn-outline btn-sm" id="sym-toggle-btn" onclick="toggleSymbolPalette()" style="font-size:13px">
         ✦ 기호
       </button>
@@ -3588,6 +3633,119 @@ function updateChapterMemoTitle(idx, val) {
   if (m) { m.title = val; autoSave(); }
 }
 
+
+// ═══════════════════════════════════════════════════════════
+// 집중 모드 (Focus Mode)
+// ═══════════════════════════════════════════════════════════
+let focusChapterId = null;
+
+function enterFocusMode() {
+  const ta = document.getElementById('prose-editor');
+  if (!ta) { toast('집필기에서만 사용할 수 있어요.'); return; }
+
+  // 현재 화 ID 가져오기
+  focusChapterId = activeChapterId;
+  const p = getProject();
+  const ch = (p?.chapters||[]).find(c => c.id === focusChapterId);
+  if (!ch) return;
+
+  // 집중 모드 에디터에 내용 복사
+  const focusEditor = document.getElementById('focus-editor');
+  focusEditor.value = ch.content || '';
+
+  // 글자 수 업데이트
+  updateFocusWordCount();
+
+  // 폰트 크기 표시 동기화
+  const sizeDisplay = document.getElementById('focus-font-size');
+  if (sizeDisplay) sizeDisplay.textContent = editorFontSize + 'px';
+  focusEditor.style.fontSize = editorFontSize + 'px';
+
+  // 오버레이 열기
+  const overlay = document.getElementById('focus-overlay');
+  overlay.classList.add('active');
+  focusEditor.focus();
+
+  // 전체화면 요청
+  if (document.documentElement.requestFullscreen) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  }
+
+  // 입력 이벤트
+  focusEditor.oninput = () => {
+    updateFocusWordCount();
+    // 원본에도 즉시 반영
+    const p2 = getProject();
+    const ch2 = (p2?.chapters||[]).find(c => c.id === focusChapterId);
+    if (ch2) {
+      ch2.content = focusEditor.value;
+      autoSave();
+    }
+  };
+}
+
+function exitFocusMode() {
+  const overlay = document.getElementById('focus-overlay');
+  overlay.classList.remove('active');
+
+  // 전체화면 해제
+  if (document.fullscreenElement) {
+    document.exitFullscreen().catch(() => {});
+  }
+
+  // 집필기 에디터도 동기화
+  const mainEditor = document.getElementById('prose-editor');
+  const focusEditor = document.getElementById('focus-editor');
+  if (mainEditor && focusEditor) {
+    mainEditor.value = focusEditor.value;
+    // 글자 수 업데이트
+    const wc = document.getElementById('wc-display');
+    if (wc) wc.textContent = focusEditor.value.length.toLocaleString() + '자';
+  }
+
+  focusChapterId = null;
+}
+
+function updateFocusWordCount() {
+  const fe = document.getElementById('focus-editor');
+  const wc = document.getElementById('focus-wordcount');
+  if (fe && wc) wc.textContent = (fe.value.length).toLocaleString() + '자';
+}
+
+// ESC로 나가기
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') {
+    const overlay = document.getElementById('focus-overlay');
+    if (overlay && overlay.classList.contains('active')) {
+      exitFocusMode();
+      return;
+    }
+  }
+});
+
+// 집중 모드에서도 Ctrl+S
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey||e.metaKey) && e.key === 's') {
+    const overlay = document.getElementById('focus-overlay');
+    if (overlay && overlay.classList.contains('active')) {
+      e.preventDefault();
+      saveToStorage();
+      if (fsAutoSaveEnabled) fsSave();
+      showSavedBanner(true);
+    }
+  }
+});
+
+// 폰트 크기 변경 시 집중 모드도 동기화
+const _origChangeFontSize = changeFontSize;
+function changeFontSize(delta) {
+  _origChangeFontSize(delta);
+  const fe = document.getElementById('focus-editor');
+  const fd = document.getElementById('focus-font-size');
+  if (fe) fe.style.fontSize = editorFontSize + 'px';
+  if (fd) fd.textContent = editorFontSize + 'px';
+}
+
 // ═══════════════════════════════════════════════════════════════
 // MODAL SYSTEM
 // ═══════════════════════════════════════════════════════════════
@@ -4025,5 +4183,33 @@ document.addEventListener('visibilitychange', () => {
   }
 });
 </script>
+
+<div id="focus-overlay">
+  <div id="focus-toolbar">
+    <div style="display:flex;align-items:center;gap:12px">
+      <span style="font-family:'Black Han Sans',sans-serif;font-size:14px;color:var(--gold)">집중 모드</span>
+      <span id="focus-wordcount">0자</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div style="display:flex;align-items:center;gap:4px;background:var(--cream);border:1px solid var(--border);border-radius:7px;padding:2px 6px">
+        <button onclick="changeFontSize(-1)" style="background:none;border:none;cursor:pointer;font-size:14px;color:var(--muted);padding:2px 4px;font-weight:700">−</button>
+        <span id="focus-font-size" style="font-size:11px;color:var(--muted);min-width:28px;text-align:center;font-weight:600">16px</span>
+        <button onclick="changeFontSize(1)" style="background:none;border:none;cursor:pointer;font-size:14px;color:var(--muted);padding:2px 4px;font-weight:700">＋</button>
+      </div>
+      <button id="focus-exit-btn" onclick="exitFocusMode()">✕ 나가기 (ESC)</button>
+    </div>
+  </div>
+  <div id="focus-editor-wrap">
+    <textarea id="focus-editor" placeholder="이야기를 시작하세요..."></textarea>
+  </div>
+  <div style="position:fixed;bottom:20px;right:20px;z-index:1001">
+    <button onclick="exitFocusMode()"
+      style="background:rgba(0,0,0,.4);color:#fff;border:none;border-radius:30px;
+        padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;
+        font-family:'Noto Sans KR',sans-serif;backdrop-filter:blur(4px)">
+      ✕ 나가기
+    </button>
+  </div>
+</div>
 </body>
 </html>
