@@ -204,7 +204,7 @@ button{cursor:pointer;font-family:'Noto Sans KR',sans-serif;border:none;border-r
 
 /* ═══ EDITOR ═════════════════════════════════════════════════ */
 .editor-wrap{display:flex;height:calc(100vh - var(--header));overflow:hidden}
-.chapter-list{width:200px;flex-shrink:0;border-right:1px solid var(--border);
+.chapter-list{width:200px;flex-shrink:0;border-right:1px solid var(--border);transition:width .2s;
   background:var(--white);display:flex;flex-direction:column;overflow:hidden;color:var(--ink)}
 .chapter-list-header{padding:12px;border-bottom:1px solid var(--border);
   display:flex;align-items:center;justify-content:space-between}
@@ -234,6 +234,16 @@ button{cursor:pointer;font-family:'Noto Sans KR',sans-serif;border:none;border-r
   font-family:"Noto Serif KR",serif;transition:all .15s;}
 .sym-btn:hover,.sym-btn:active{background:var(--gold-light);border-color:var(--gold);}
 .editor-toolbar{position:relative;}
+.chapter-list.collapsed { width:0 !important; border:none !important; overflow:hidden !important; }
+.chapter-list-wrap { position:relative; }
+#chapter-collapse-btn {
+  position:absolute; right:-12px; top:50%; transform:translateY(-50%);
+  width:24px; height:40px; z-index:10;
+  background:var(--white); border:1px solid var(--border);
+  border-radius:0 6px 6px 0; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+  font-size:11px; color:var(--muted); box-shadow:2px 0 4px var(--shadow);
+}
 
 /* ═══ STATUS COLORS ═══════════════════════════════════════════ */
 .s-기획중{background:#fff3e0;color:#b36a00}
@@ -345,9 +355,12 @@ button{cursor:pointer;font-family:'Noto Sans KR',sans-serif;border:none;border-r
 #split-panel {
   width:360px; flex-shrink:0; border-left:1.5px solid var(--border);
   background:var(--paper); display:flex; flex-direction:column;
-  overflow:hidden; transition:width .2s;
+  overflow:hidden; transition:all .2s;
 }
-#split-panel.hidden { width:0; border:none; }
+#split-panel.hidden { display:none !important; }
+@media (max-width: 768px) {
+  #split-panel:not(.hidden) { width:100% !important; max-height:45vh; border-left:none; border-top:1.5px solid var(--border); }
+}
 .split-panel-tabs {
   display:flex; gap:2px; padding:8px 10px 0;
   border-bottom:1px solid var(--border); background:var(--cream);
@@ -1321,6 +1334,8 @@ function renderChapters() {
             : chList}
         </div>
       </div>
+      <button id="chapter-collapse-btn" onclick="toggleChapterList()" title="화 목록 접기/펼치기">◀</button>
+    </div>
       <div class="editor-area" id="editor-area">
         ${ch ? renderEditorContent(ch) : `
           <div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:var(--muted)">
@@ -3280,11 +3295,11 @@ function toggleSplitPanel() {
   const isHidden = panel.classList.contains('hidden');
   if (isHidden) {
     panel.classList.remove('hidden');
-    if (btn) { btn.style.background='var(--gold-light)'; btn.style.borderColor='var(--gold)'; btn.style.color='var(--gold)'; }
+    if (btn) { btn.style.background='var(--gold-light)'; btn.style.borderColor='var(--gold)'; btn.style.color='var(--gold)'; btn.textContent='⊠ 참고'; }
     renderSplitContent();
   } else {
     panel.classList.add('hidden');
-    if (btn) { btn.style.background=''; btn.style.borderColor=''; btn.style.color=''; }
+    if (btn) { btn.style.background=''; btn.style.borderColor=''; btn.style.color=''; btn.textContent='⊞ 참고'; }
   }
 }
 
@@ -3396,6 +3411,16 @@ function renderSplitContent() {
       </div>
     `).join('');
   }
+}
+
+
+function toggleChapterList() {
+  const list = document.getElementById('chapter-list');
+  const btn  = document.getElementById('chapter-collapse-btn');
+  if (!list || !btn) return;
+  const collapsed = list.classList.toggle('collapsed');
+  btn.textContent = collapsed ? '▶' : '◀';
+  btn.style.right = collapsed ? '-12px' : '-12px';
 }
 
 // ═══════════════════════════════════════════════════════════════
