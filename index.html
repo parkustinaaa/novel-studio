@@ -3330,31 +3330,15 @@ function showChExportMenu(chId) {
 // 커스텀 확인 모달 (태블릿 confirm 대체)
 // ═══════════════════════════════════════════════════════════
 function confirmDialog(msg, onOk) {
+  document.querySelectorAll('.confirm-dialog-bg').forEach(el => el.remove());
   const bg = document.createElement('div');
-  bg.style.cssText = 'position:fixed;inset:0;background:rgba(24,18,10,.55);backdrop-filter:blur(4px);z-index:9999;display:flex;align-items:center;justify-content:center;animation:fadein .15s';
-  bg.innerHTML = `
-    <div style="background:var(--paper);border:1px solid var(--border);border-radius:14px;
-      padding:24px;width:300px;max-width:90vw;box-shadow:0 20px 60px rgba(24,18,10,.3);
-      animation:sup .2s;text-align:center">
-      <div style="font-size:28px;margin-bottom:12px">🗑️</div>
-      <div style="font-size:15px;font-weight:600;color:var(--ink);margin-bottom:6px">정말 삭제하시겠습니까?</div>
-      <div style="font-size:13px;color:var(--muted);margin-bottom:20px">${msg}</div>
-      <div style="display:flex;gap:10px;justify-content:center">
-        <button onclick="this.closest('div[style*=fixed]').remove()"
-          style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:8px;
-            background:transparent;color:var(--muted);cursor:pointer;font-size:14px;
-            font-weight:600;font-family:'Noto Sans KR',sans-serif">취소</button>
-        <button id="confirm-ok-btn"
-          style="flex:1;padding:10px;border:none;border-radius:8px;
-            background:var(--rust);color:#fff;cursor:pointer;font-size:14px;
-            font-weight:700;font-family:'Noto Sans KR',sans-serif">삭제</button>
-      </div>
-    </div>`;
+  bg.className = 'confirm-dialog-bg';
+  bg.style.cssText = 'position:fixed;inset:0;background:rgba(24,18,10,.55);z-index:9999;display:flex;align-items:center;justify-content:center;';
+  bg.innerHTML = '<div style="background:var(--paper);border:1px solid var(--border);border-radius:14px;padding:24px;width:300px;max-width:90vw;text-align:center"><div style="font-size:28px;margin-bottom:12px">🗑️</div><div style="font-size:15px;font-weight:600;color:var(--ink);margin-bottom:6px">정말 삭제하시겠습니까?</div><div style="font-size:13px;color:var(--muted);margin-bottom:20px">' + msg + '</div><div style="display:flex;gap:10px"><button class="cdg-cancel" style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:8px;background:transparent;color:var(--muted);cursor:pointer;font-size:14px;font-weight:600;font-family:Noto Sans KR,sans-serif">취소</button><button class="cdg-ok" style="flex:1;padding:10px;border:none;border-radius:8px;background:var(--rust);color:#fff;cursor:pointer;font-size:14px;font-weight:700;font-family:Noto Sans KR,sans-serif">삭제</button></div></div>';
   document.body.appendChild(bg);
-  bg.querySelector('#confirm-ok-btn').onclick = () => { bg.remove(); onOk(); };
-  bg.addEventListener('click', e => { if (e.target === bg) bg.remove(); });
+  bg.querySelector('.cdg-cancel').addEventListener('click', () => bg.remove());
+  bg.querySelector('.cdg-ok').addEventListener('click', () => { bg.remove(); onOk(); });
 }
-
 
 // ═══════════════════════════════════════════════════════════
 // 분할 패널 (참고 패널)
