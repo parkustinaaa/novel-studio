@@ -445,6 +445,7 @@ button{cursor:pointer;font-family:'Noto Sans KR',sans-serif;border:none;border-r
     <div id="header-spacer"></div>
     <div id="header-actions" style="display:flex;align-items:center;gap:4px;flex-shrink:0">
       <button class="header-btn" onclick="toggleDarkMode()" id="btn-darkmode" title="다크모드 전환" style="font-size:16px;padding:5px 8px">🌙</button>
+      <button class="header-btn" id="fs-status-btn" onclick="fsConnect()" title="로컬 파일에 자동저장" style="font-size:11px;padding:5px 8px">💾 파일 연결</button>
       <button class="header-btn" onclick="showExportModal()" id="btn-export" style="display:none">📤 <span class="btn-text">내보내기</span></button>
       <button class="header-btn" onclick="document.getElementById('import-file').click()" id="btn-import" style="display:none">📂 <span class="btn-text">불러오기</span></button>
       <button class="header-btn gold" onclick="showNewProjectModal()">＋ <span class="btn-text">새 작품</span></button>
@@ -3801,6 +3802,137 @@ function changeFontSize(delta) {
   applyEditorFontSize();
 }
 
+
+// ═══════════════════════════════════════════════════════════
+// File System Access API - 로컬 파일 자동저장
+// ═══════════════════════════════════════════════════════════
+let fsFileHandle = null;  // 현재 연결된 파일 핸들
+let fsAutoSaveEnabled = false;
+
+const FS_SUPPORTED = 'showSaveFilePicker' in window;
+
+// 파일 연결 (새 파일 또는 기존 파일 열기)
+async function fsConnect() {
+  if (!FS_SUPPORTED) {
+    toast('이 브라우저는 파일 자동저장을 지원하지 않아요. Chrome을 사용해주세요.');
+    return;
+  }
+  try {
+    // 기존 파일 열기 or 새 파일 만들기 선택
+    const choice = await showFsChoiceModal();
+    if (!choice) return;
+
+    if (choice === 'open') {
+      const [handle] = await window.showOpenFilePicker({
+        types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }],
+      });
+      fsFileHandle = handle;
+      // 파일 내용 불러오기
+      const file = await handle.getFile();
+      const text = await file.text();
+      const data = JSON.parse(text);
+      if (data.projects) {
+        state = data;
+        saveToStorage();
+        renderHome();
+        toast('✓ 파일을 불러왔어요!');
+      }
+    } else {
+      fsFileHandle = await window.showSaveFilePicker({
+        suggestedName: 'wnstudio-backup.json',
+        types: [{ description: 'JSON', accept: { 'application/json': ['.json'] } }],
+      });
+      // 현재 데이터 즉시 저장
+      await fsSave();
+      toast('✓ 파일이 연결됐어요! 이제 Ctrl+S로 자동저장돼요.');
+    }
+
+    fsAutoSaveEnabled = true;
+    updateFsStatus();
+  } catch (e) {
+    if (e.name !== 'AbortError') toast('파일 연결 실패: ' + e.message);
+  }
+}
+
+// 파일에 저장
+async function fsSave() {
+  if (!fsFileHandle) return false;
+  try {
+    const writable = await fsFileHandle.createWritable();
+    await writable.write(JSON.stringify(state, null, 2));
+    await writable.close();
+    return true;
+  } catch (e) {
+    console.error('fsSave error:', e);
+    fsFileHandle = null;
+    fsAutoSaveEnabled = false;
+    updateFsStatus();
+    return false;
+  }
+}
+
+// 연결 해제
+function fsDisconnect() {
+  fsFileHandle = null;
+  fsAutoSaveEnabled = false;
+  updateFsStatus();
+  toast('파일 연결이 해제됐어요.');
+}
+
+// 상태 표시 업데이트
+function updateFsStatus() {
+  const btn = document.getElementById('fs-status-btn');
+  if (!btn) return;
+  if (fsAutoSaveEnabled && fsFileHandle) {
+    btn.textContent = '💾 ' + (fsFileHandle.name || '파일 연결됨');
+    btn.style.borderColor = 'var(--teal)';
+    btn.style.color = 'var(--teal)';
+    btn.title = '클릭하면 연결 해제';
+    btn.onclick = fsDisconnect;
+  } else {
+    btn.textContent = '💾 파일 연결';
+    btn.style.borderColor = '';
+    btn.style.color = '';
+    btn.title = '로컬 파일에 자동저장';
+    btn.onclick = fsConnect;
+  }
+}
+
+// 파일 선택 모달
+function showFsChoiceModal() {
+  return new Promise(resolve => {
+    const bg = document.createElement('div');
+    bg.style.cssText = 'position:fixed;inset:0;background:rgba(24,18,10,.6);z-index:9999;display:flex;align-items:center;justify-content:center;';
+    bg.innerHTML = `
+      <div style="background:var(--paper);border:1px solid var(--border);border-radius:16px;
+        padding:28px;width:320px;box-shadow:0 20px 60px rgba(0,0,0,.3)">
+        <div style="font-family:'Black Han Sans',sans-serif;font-size:18px;color:var(--gold);margin-bottom:8px">💾 파일 연결</div>
+        <p style="font-size:13px;color:var(--muted);line-height:1.7;margin-bottom:20px">
+          로컬 파일에 직접 저장하면 브라우저 캐시와 무관하게 안전하게 보관돼요.
+        </p>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <button onclick="this.closest('div[style*=fixed]').remove();window._fsResolve('new')"
+            style="padding:12px;background:var(--gold);color:#fff;border:none;border-radius:10px;
+              font-size:14px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif">
+            📄 새 파일 만들기
+          </button>
+          <button onclick="this.closest('div[style*=fixed]').remove();window._fsResolve('open')"
+            style="padding:12px;background:transparent;color:var(--ink);border:1.5px solid var(--border);
+              border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:'Noto Sans KR',sans-serif">
+            📂 기존 파일 불러오기
+          </button>
+          <button onclick="this.closest('div[style*=fixed]').remove();window._fsResolve(null)"
+            style="padding:8px;background:transparent;color:var(--muted);border:none;
+              font-size:13px;cursor:pointer;font-family:'Noto Sans KR',sans-serif">
+            취소
+          </button>
+        </div>
+      </div>`;
+    window._fsResolve = resolve;
+    document.body.appendChild(bg);
+  });
+}
+
 // ═══════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════
@@ -3808,6 +3940,7 @@ loadFromStorage();
 initDarkMode();
 applyEditorFontSize();
 renderHome();
+setTimeout(updateFsStatus, 100);
 
 // PWA Service Worker 등록
 if ('serviceWorker' in navigator) {
