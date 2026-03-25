@@ -46,12 +46,11 @@
 [data-theme="dark"] .sym-btn { background:var(--cream) !important; color:var(--ink) !important; }
 [data-theme="dark"] #shortcut-bar { background:var(--cream) !important; }
 [data-theme="dark"] .diagram-canvas-wrap { background:var(--paper) !important; background-image:radial-gradient(circle,var(--border) 1px,transparent 1px) !important; }
-[data-theme="dark"] .memo-card { background:revert !important; }
+[data-theme="dark"] .memo-card { filter:none !important; }
 [data-theme="dark"] .memo-card,
 [data-theme="dark"] .memo-card *,
 [data-theme="dark"] .memo-card textarea,
-[data-theme="dark"] .memo-card input { color:#1a1208 !important; }
-[data-theme="dark"] .memo-card-header { background:revert !important; }
+[data-theme="dark"] .memo-card input { color:#1a1208 !important; background-color:inherit !important; }
 [data-theme="dark"] .memo-card-body textarea { background:transparent !important; }
 [data-theme="dark"] .project-card { background:var(--white) !important; border-color:var(--border) !important; }
 html,body{height:100%;overflow:hidden;background:var(--paper);color:var(--ink);
@@ -659,6 +658,7 @@ function openProject(id) {
 }
 
 function navigate(tab) {
+  const prevTab = state.activeTab;
   state.activeTab = tab;
   document.querySelectorAll('.nav-item').forEach(el => {
     el.classList.toggle('active', el.dataset.tab === tab);
@@ -678,6 +678,7 @@ function navigate(tab) {
     manuscript: renderManuscript,
     memo: renderMemo,
   };
+
   if (renders[tab]) renders[tab]();
 }
 
@@ -3335,35 +3336,31 @@ function renderSplitContent() {
   if (splitTab === 'overview') {
     el.innerHTML = `
       <div style="margin-bottom:14px">
-        <label class="label">작품 제목</label>
-        <input value="${esc(p.title||'')}" oninput="updateSplitField('title',this.value)"
-          style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-weight:700;background:var(--white);color:var(--ink)">
+        <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px;margin-bottom:4px">작품 제목</div>
+        <div style="font-size:16px;font-weight:700;color:var(--ink)">${esc(p.title||'제목 없음')}</div>
       </div>
-      <div style="margin-bottom:14px">
-        <label class="label">장르</label>
-        <select onchange="updateSplitField('genre',this.value)"
-          style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--white);color:var(--ink)">
-          ${selOpts(GENRES, p.genre||'판타지')}
-        </select>
+      <div style="display:flex;gap:12px;margin-bottom:14px">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:2px">장르</div>
+          <div style="font-size:13px">${esc(p.genre||'-')}</div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:2px">상태</div>
+          <div style="font-size:13px">${esc(p.status||'-')}</div>
+        </div>
       </div>
-      <div style="margin-bottom:14px">
-        <label class="label">상태</label>
-        <select onchange="updateSplitField('status',this.value)"
-          style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--white);color:var(--ink)">
-          ${selOpts(STATUSES, p.status||'기획중')}
-        </select>
-      </div>
-      <div style="margin-bottom:14px">
-        <label class="label">줄거리</label>
-        <textarea oninput="updateSplitField('synopsis',this.value)"
-          rows="8" placeholder="작품의 전체 줄거리를 입력하세요..."
-          style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;line-height:1.8;background:var(--white);color:var(--ink);resize:vertical">${esc(p.synopsis||'')}</textarea>
-      </div>
-      <div>
-        <label class="label">메모</label>
-        <textarea oninput="updateSplitField('memo',this.value)"
-          rows="4" placeholder="작가 메모..."
-          style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;line-height:1.8;background:var(--white);color:var(--ink);resize:vertical">${esc(p.memo||'')}</textarea>
+      ${p.synopsis ? `
+        <div style="margin-bottom:14px">
+          <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px">줄거리</div>
+          <div style="font-size:13px;line-height:1.9;color:var(--ink);white-space:pre-wrap;padding:12px;background:var(--cream);border-radius:8px;border-left:3px solid var(--gold)">${esc(p.synopsis)}</div>
+        </div>` : ''}
+      ${p.memo ? `
+        <div>
+          <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px">작가 메모</div>
+          <div style="font-size:13px;line-height:1.8;color:var(--muted);white-space:pre-wrap">${esc(p.memo)}</div>
+        </div>` : ''}
+      <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border)">
+        <button class="btn btn-outline btn-sm" onclick="navigate('overview')" style="font-size:11px">✏️ 작품 개요 편집</button>
       </div>
     `;
 
@@ -3478,47 +3475,30 @@ function renderSplitContent() {
       </div>`).join('');
 
   } else if (splitTab === 'memo') {
-    const memos = p.memos || [];
-    // 색상 팔레트 (MEMO_COLORS와 동일)
-    const splitMemoColors = MEMO_COLORS.length ? MEMO_COLORS : [
-      {bg:'#fff8e1',border:'#f5d76e'},{bg:'#e8f5e9',border:'#81c784'},
-      {bg:'#e3f2fd',border:'#64b5f6'},{bg:'#fce4ec',border:'#f48fb1'},
-      {bg:'#f3e5f5',border:'#ce93d8'},{bg:'#fff3e0',border:'#ffb74d'},
-      {bg:'#e0f7fa',border:'#4dd0e1'}
-    ];
+    const memos = getChapterMemos();
+    const splitMemoColors = [{bg:'#fff8e1',border:'#f5d76e'}]; // dummy, 안 씀
     el.innerHTML = `
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
-        ${splitMemoColors.map(c=>`
-          <button onclick="addMemo('${c.bg}')"
-            style="width:28px;height:28px;border-radius:50%;background:${c.bg};
-              border:2px solid ${c.border};cursor:pointer;flex-shrink:0"
-            title="메모 추가"></button>`).join('')}
-        <span style="font-size:11px;color:var(--muted);margin-left:2px">탭하면 추가</span>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <span style="font-size:12px;font-weight:700;color:var(--muted)">집필 메모 (${memos.length})</span>
+        <button onclick="addChapterMemo()" class="btn btn-gold btn-sm">＋ 추가</button>
       </div>
       ${memos.length === 0
-        ? '<div style="color:var(--muted);text-align:center;padding:20px;font-size:13px">위 색상을 탭해서 메모를 추가하세요</div>'
-        : memos.map((m,i) => {
-            const col = splitMemoColors.find(c=>c.bg===m.color) || splitMemoColors[0];
-            return `
-              <div style="border-radius:10px;overflow:hidden;border:1.5px solid ${col.border};margin-bottom:12px;box-shadow:0 2px 6px rgba(0,0,0,.08)">
-                <div style="padding:8px 12px 4px;background:${col.bg};display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid ${col.border}">
-                  <input value="${esc(m.title||'')}" oninput="updateSplitMemoTitle(${i},this.value)"
-                    placeholder="제목"
-                    style="border:none;outline:none;background:transparent;font-weight:700;
-                      font-size:13px;color:#1a1208;width:calc(100% - 30px)">
-                  <button onclick="deleteSplitMemo(${i})"
-                    style="background:none;border:none;cursor:pointer;font-size:14px;color:rgba(0,0,0,.35);flex-shrink:0">🗑</button>
-                </div>
-                <textarea oninput="updateSplitMemo(${i},this.value)" rows="4"
-                  placeholder="자유롭게 메모하세요..."
-                  style="width:100%;padding:10px 12px;font-size:13px;line-height:1.7;
-                    background:${col.bg};border:none;outline:none;resize:vertical;
-                    font-family:'Noto Serif KR',serif;color:#1a1208">${esc(m.text||'')}</textarea>
-                <div style="padding:4px 12px 6px;background:${col.bg};font-size:10px;color:rgba(0,0,0,.4);text-align:right">
-                  ${m.date ? new Date(m.date).toLocaleDateString('ko-KR') : ''}
-                </div>
-              </div>`;
-          }).join('')}
+        ? '<div style="color:var(--muted);text-align:center;padding:30px 0;font-size:13px">＋ 추가 버튼으로 메모를 만들어보세요</div>'
+        : memos.map((m,i) => `
+          <div style="border:1px solid var(--border);border-radius:10px;margin-bottom:10px;overflow:hidden;background:var(--white)">
+            <div style="display:flex;align-items:center;gap:6px;padding:8px 10px;border-bottom:1px solid var(--border);background:var(--cream)">
+              <input value="${esc(m.title||'')}" oninput="updateChapterMemoTitle(${i},this.value)"
+                placeholder="제목 (선택)"
+                style="flex:1;border:none;outline:none;background:transparent;font-weight:700;font-size:13px;color:var(--ink)">
+              <button onclick="deleteChapterMemo(${i})"
+                style="background:none;border:none;cursor:pointer;font-size:13px;color:var(--rust);flex-shrink:0">✕</button>
+            </div>
+            <textarea oninput="updateChapterMemoText(${i},this.value)" rows="4"
+              placeholder="메모를 입력하세요..."
+              style="width:100%;padding:10px 12px;font-size:13px;line-height:1.8;
+                background:var(--white);border:none;outline:none;resize:vertical;
+                font-family:'Noto Serif KR',serif;color:var(--ink)">${esc(m.text||'')}</textarea>
+          </div>`).join('')}
     `;
   }
 }
@@ -3561,6 +3541,38 @@ function toggleChapterList() {
   if (!list || !btn) return;
   const collapsed = list.classList.toggle('collapsed');
   btn.textContent = collapsed ? '▶' : '◀';
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// 집필기 전용 메모 (사이드바 메모장과 분리)
+// ═══════════════════════════════════════════════════════════
+function getChapterMemos() {
+  const p = getProject();
+  if (!p.chapterMemos) p.chapterMemos = [];
+  return p.chapterMemos;
+}
+
+function addChapterMemo() {
+  getChapterMemos().push({ id: uid(), text: '', title: '', date: new Date().toISOString() });
+  autoSave();
+  renderSplitContent();
+}
+
+function deleteChapterMemo(idx) {
+  getChapterMemos().splice(idx, 1);
+  autoSave();
+  renderSplitContent();
+}
+
+function updateChapterMemoText(idx, val) {
+  const m = getChapterMemos()[idx];
+  if (m) { m.text = val; autoSave(); }
+}
+
+function updateChapterMemoTitle(idx, val) {
+  const m = getChapterMemos()[idx];
+  if (m) { m.title = val; autoSave(); }
 }
 
 // ═══════════════════════════════════════════════════════════════
