@@ -46,7 +46,10 @@
 [data-theme="dark"] .sym-btn { background:var(--cream) !important; color:var(--ink) !important; }
 [data-theme="dark"] #shortcut-bar { background:var(--cream) !important; }
 [data-theme="dark"] .diagram-canvas-wrap { background:var(--paper) !important; background-image:radial-gradient(circle,var(--border) 1px,transparent 1px) !important; }
-[data-theme="dark"] .memo-card { border-color:var(--border) !important; }
+[data-theme="dark"] .memo-card,
+[data-theme="dark"] .memo-card *,
+[data-theme="dark"] .memo-card textarea,
+[data-theme="dark"] .memo-card input { color:#1a1208 !important; }
 [data-theme="dark"] .project-card { background:var(--white) !important; border-color:var(--border) !important; }
 html,body{height:100%;overflow:hidden;background:var(--paper);color:var(--ink);
   font-family:'Noto Sans KR',sans-serif;font-size:14px;-webkit-tap-highlight-color:transparent}
@@ -319,7 +322,7 @@ button{cursor:pointer;font-family:'Noto Sans KR',sans-serif;border:none;border-r
 /* ═══ MEMO ═══════════════════════════════════════════════════ */
 .memo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
 .memo-card{background:var(--white);border:1.5px solid var(--border);border-radius:10px;
-  padding:0;overflow:hidden;box-shadow:0 2px 8px var(--shadow);
+  padding:0;overflow:hidden;box-shadow:0 2px 8px var(--shadow);color:#1a1208 !important;
   display:flex;flex-direction:column;transition:box-shadow .15s}
 .memo-card:hover{box-shadow:0 4px 16px var(--shadow)}
 .memo-card-header{padding:10px 14px 6px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
@@ -3473,17 +3476,30 @@ function renderSplitContent() {
 
   } else if (splitTab === 'memo') {
     const memos = p.memos || [];
-    if (!memos.length) {
-      el.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px">메모가 없어요</div>';
-      return;
-    }
-    el.innerHTML = memos.map((m,i) => `
-      <div style="margin-bottom:10px;border-radius:10px;overflow:hidden;border:1px solid rgba(0,0,0,.08)">
-        <textarea oninput="updateSplitMemo(${i},this.value)" rows="4"
-          style="width:100%;padding:10px 12px;font-size:13px;line-height:1.7;
-            background:${m.color||'#fff8e1'};border:none;outline:none;resize:vertical;
-            font-family:'Noto Serif KR',serif;color:var(--ink)">${esc(m.text||'')}</textarea>
-      </div>`).join('');
+    const memoColors = ['#fff8e1','#e8f5e9','#e3f2fd','#fce4ec','#f3e5f5','#fff3e0','#e0f7fa'];
+    el.innerHTML = `
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+        ${memoColors.map(c=>`
+          <button onclick="addMemo('${c}')"
+            style="width:28px;height:28px;border-radius:50%;background:${c};
+              border:2px solid rgba(0,0,0,.1);cursor:pointer;flex-shrink:0"
+            title="메모 추가"></button>`).join('')}
+        <span style="font-size:11px;color:var(--muted);align-self:center;margin-left:4px">색상 선택 후 탭하면 추가</span>
+      </div>
+      ${memos.length === 0
+        ? '<div style="color:var(--muted);text-align:center;padding:20px;font-size:13px">＋ 위 색상을 탭해서 메모를 추가하세요</div>'
+        : memos.map((m,i) => `
+          <div style="margin-bottom:10px;border-radius:10px;overflow:hidden;border:1px solid rgba(0,0,0,.1)">
+            <textarea oninput="updateSplitMemo(${i},this.value)" rows="4"
+              placeholder="메모를 입력하세요..."
+              style="width:100%;padding:10px 12px;font-size:13px;line-height:1.7;
+                background:${m.color||'#fff8e1'};border:none;outline:none;resize:vertical;
+                font-family:'Noto Serif KR',serif;color:#1a1208">${esc(m.text||'')}</textarea>
+            <div style="display:flex;justify-content:flex-end;padding:4px 8px;background:${m.color||'#fff8e1'}">
+              <button onclick="deleteSplitMemo(${i})" style="background:none;border:none;cursor:pointer;font-size:11px;color:rgba(0,0,0,.4)">🗑️ 삭제</button>
+            </div>
+          </div>`).join('')}
+    `;
   }
 }
 
@@ -3501,6 +3517,14 @@ function updateSplitMemo(idx, val) {
   if (!p || !p.memos) return;
   p.memos[idx].text = val;
   autoSave();
+}
+
+function deleteSplitMemo(idx) {
+  const p = getProject();
+  if (!p || !p.memos) return;
+  p.memos.splice(idx, 1);
+  autoSave();
+  renderSplitContent();
 }
 
 
