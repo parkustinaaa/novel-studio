@@ -1,45 +1,3893 @@
-// wnstudio sw.js - updated: 1774409125
-const CACHE = 'wnstudio-1774410568';
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>웹소설 스튜디오</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#18120a">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="웹소설 스튜디오">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@400;600;700&family=Noto+Sans+KR:wght@300;400;500;700&family=Black+Han+Sans&display=swap" rel="stylesheet">
+<style>
+/* ═══ RESET & ROOT ═══════════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --ink:#18120a; --paper:#faf7f2; --cream:#f0e9d8; --white:#ffffff;
+  --gold:#c4922a; --gold2:#e8bc5c; --gold-light:#fff8ee;
+  --teal:#235f62; --teal2:#2d8285; --teal-light:#e8f4f4;
+  --rust:#b5451b; --rust-light:#fdf0ec;
+  --muted:#7a6e5f; --border:#ddd3be; --shadow:rgba(24,18,10,.1);
+  --sidebar:240px; --header:52px;
+}
+[data-theme="dark"]{
+  --ink:#e8e0d4; --paper:#1a1612; --cream:#231f1b; --white:#252017;
+  --gold:#e8bc5c; --gold2:#f5d080; --gold-light:#2a2310;
+  --teal:#3d9195; --teal2:#4aabb0; --teal-light:#0e2526;
+  --rust:#e06040; --rust-light:#2a1510;
+  --muted:#9a8e7f; --border:#3a342c; --shadow:rgba(0,0,0,.3);
+}
+[data-theme="dark"] #prose-editor { color:var(--ink) !important; }
+[data-theme="dark"] .editor-content { background:var(--paper) !important; }
+[data-theme="dark"] .editor-toolbar { background:var(--white) !important; }
+[data-theme="dark"] .chapter-list { background:var(--white) !important; }
+[data-theme="dark"] .chapter-item:hover { background:var(--cream) !important; }
+[data-theme="dark"] .chapter-item.active { background:var(--gold-light) !important; }
+[data-theme="dark"] input, [data-theme="dark"] textarea, [data-theme="dark"] select {
+  background:var(--white) !important; color:var(--ink) !important; border-color:var(--border) !important;
+}
+[data-theme="dark"] .card { background:var(--white) !important; border-color:var(--border) !important; }
+[data-theme="dark"] .modal { background:var(--paper) !important; border-color:var(--border) !important; }
+[data-theme="dark"] .modal-bg { background:rgba(0,0,0,.7) !important; }
+[data-theme="dark"] .nav-item.active { background:var(--gold-light) !important; }
+[data-theme="dark"] .sym-btn { background:var(--cream) !important; color:var(--ink) !important; }
+[data-theme="dark"] #shortcut-bar { background:var(--cream) !important; }
+[data-theme="dark"] .diagram-canvas-wrap { background:var(--paper) !important; background-image:radial-gradient(circle,var(--border) 1px,transparent 1px) !important; }
+[data-theme="dark"] .memo-card,
+[data-theme="dark"] .memo-card *,
+[data-theme="dark"] .memo-card textarea,
+[data-theme="dark"] .memo-card input { color:#1a1208 !important; }
+[data-theme="dark"] .project-card { background:var(--white) !important; border-color:var(--border) !important; }
+html,body{height:100%;overflow:hidden;background:var(--paper);color:var(--ink);
+  font-family:'Noto Sans KR',sans-serif;font-size:14px;-webkit-tap-highlight-color:transparent}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-track{background:var(--cream)}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
 
-self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE).then(cache =>
-      cache.addAll(['/novel-studio/', '/novel-studio/index.html'])
-    )
-  );
-  self.skipWaiting();
-});
+/* ═══ TYPOGRAPHY ═══════════════════════════════════════════ */
+.font-display{font-family:'Black Han Sans',sans-serif}
+.font-serif{font-family:'Noto Serif KR',serif}
 
-self.addEventListener('activate', e => {
-  // 이전 캐시 전부 삭제
-  e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(keys.map(k => caches.delete(k)))
-    )
-  );
-  self.clients.claim();
-});
+/* ═══ FORMS ═══════════════════════════════════════════════ */
+input,textarea,select{
+  font-family:'Noto Sans KR',sans-serif;
+  background:var(--white);color:var(--ink);
+  border:1.5px solid var(--border);border-radius:8px;
+  padding:9px 13px;font-size:14px;outline:none;
+  transition:border-color .2s,box-shadow .2s;width:100%;
+  -webkit-appearance:none;appearance:none;
+}
+input:focus,textarea:focus,select:focus{
+  border-color:var(--gold);box-shadow:0 0 0 3px rgba(196,146,42,.15)}
+textarea{resize:vertical;line-height:1.8;min-height:80px}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237a6e5f' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;padding-right:36px;cursor:pointer}
 
-self.addEventListener('fetch', e => {
-  if (e.request.method !== 'GET') return;
-  // 네트워크 우선 전략
-  e.respondWith(
-    fetch(e.request)
-      .then(res => {
-        if (res && res.status === 200) {
-          const clone = res.clone();
-          caches.open(CACHE).then(cache => cache.put(e.request, clone));
+/* ═══ BUTTONS ═══════════════════════════════════════════════ */
+button{cursor:pointer;font-family:'Noto Sans KR',sans-serif;border:none;border-radius:8px;transition:all .18s;-webkit-tap-highlight-color:transparent}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;font-size:13px;font-weight:600;white-space:nowrap}
+.btn-sm{padding:6px 12px;font-size:12px;gap:4px}
+.btn-gold{background:var(--gold);color:#fff}
+.btn-gold:hover,.btn-gold:active{background:var(--gold2);color:var(--ink);box-shadow:0 4px 14px rgba(196,146,42,.3)}
+.btn-teal{background:var(--teal);color:#fff}
+.btn-teal:hover,.btn-teal:active{background:var(--teal2)}
+.btn-outline{background:transparent;color:var(--muted);border:1.5px solid var(--border)}
+.btn-outline:hover,.btn-outline:active{background:var(--cream);color:var(--ink);border-color:var(--gold)}
+.btn-ghost{background:transparent;color:var(--muted)}
+.btn-ghost:hover,.btn-ghost:active{background:var(--cream);color:var(--ink)}
+.btn-danger{background:transparent;color:var(--rust);border:1.5px solid rgba(181,69,27,.25)}
+.btn-danger:hover,.btn-danger:active{background:var(--rust-light)}
+.btn-icon{width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;background:transparent;color:var(--muted)}
+.btn-icon:hover{background:var(--cream);color:var(--ink)}
+
+/* ═══ LAYOUT ════════════════════════════════════════════════ */
+#app{display:flex;flex-direction:column;height:100vh;overflow:hidden}
+
+/* Header */
+#header{
+  height:var(--header);background:var(--ink);
+  display:flex;align-items:center;padding:0 16px;gap:8px;
+  box-shadow:0 2px 12px rgba(0,0,0,.25);flex-shrink:0;z-index:200;
+  overflow:hidden;
+}
+#header-title{font-family:'Black Han Sans',sans-serif;font-size:17px;color:var(--gold);
+  letter-spacing:1px;cursor:pointer;white-space:nowrap;background:none;border:none;padding:0;flex-shrink:0}
+#header-project{font-size:13px;color:rgba(255,255,255,.75);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px}
+#header-spacer{flex:1}
+#header-actions{display:flex;gap:8px;align-items:center;flex-shrink:0}
+.header-btn{background:rgba(255,255,255,.1);color:rgba(255,255,255,.8);border:none;
+  border-radius:7px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;
+  display:inline-flex;align-items:center;gap:5px;font-family:'Noto Sans KR',sans-serif;
+  transition:background .15s;white-space:nowrap}
+.header-btn:hover,.header-btn:active{background:rgba(255,255,255,.2)}
+.header-btn.gold{background:var(--gold);color:#fff}
+.header-btn.gold:hover{background:var(--gold2);color:var(--ink)}
+
+/* Body split */
+#body{display:flex;flex:1;overflow:hidden}
+
+/* Sidebar */
+#sidebar{
+  width:var(--sidebar);background:var(--white);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;
+  transition:transform .25s ease,width .25s ease;flex-shrink:0;
+}
+#sidebar.hidden{transform:translateX(-100%);width:0}
+.sidebar-project-info{padding:16px;border-bottom:1px solid var(--border)}
+.sidebar-project-title{font-family:'Noto Serif KR',serif;font-weight:700;font-size:15px;
+  margin-bottom:6px;line-height:1.4;word-break:break-all}
+.sidebar-nav{flex:1;overflow-y:auto;padding:8px}
+.nav-section{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1.2px;
+  text-transform:uppercase;padding:10px 8px 4px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;
+  cursor:pointer;font-size:13px;font-weight:500;color:var(--muted);
+  transition:all .15s;margin-bottom:2px;border:none;background:none;width:100%;text-align:left;
+  font-family:'Noto Sans KR',sans-serif}
+.nav-item:hover{background:var(--cream);color:var(--ink)}
+.nav-item.active{background:var(--gold-light);color:var(--gold);font-weight:700;
+  border-left:3px solid var(--gold)}
+.nav-item svg{flex-shrink:0}
+.nav-badge{margin-left:auto;background:var(--cream);color:var(--muted);
+  border-radius:20px;padding:1px 8px;font-size:10px;font-weight:700}
+.sidebar-footer{padding:12px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:6px}
+
+/* Main content */
+#main{flex:1;overflow-y:auto;padding:24px;background:var(--paper)}
+#main.no-pad{padding:0}
+
+/* Mobile overlay sidebar */
+#sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:150}
+
+/* ═══ CARDS & COMPONENTS ═══════════════════════════════════ */
+.card{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:20px;box-shadow:0 2px 8px var(--shadow)}
+.card-sm{padding:14px 16px}
+.label{font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px;letter-spacing:.3px;display:block}
+.tag{display:inline-flex;align-items:center;background:var(--cream);border:1px solid var(--border);
+  border-radius:20px;padding:3px 10px;font-size:11px;color:var(--muted);font-weight:500;gap:4px}
+.status-badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600}
+.sec-title{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:1.2px;
+  text-transform:uppercase;margin-bottom:12px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.form-grid .full{grid-column:1/-1}
+.empty-state{text-align:center;padding:48px 20px;color:var(--muted)}
+.empty-state .emoji{font-size:40px;margin-bottom:12px}
+
+/* ═══ MODAL ══════════════════════════════════════════════════ */
+.modal-bg{position:fixed;inset:0;background:rgba(24,18,10,.55);
+  backdrop-filter:blur(4px);z-index:500;display:flex;align-items:center;justify-content:center;
+  animation:fadein .2s;padding:16px}
+.modal{background:var(--paper);border:1px solid var(--border);border-radius:14px;
+  padding:24px;width:100%;max-width:560px;max-height:90vh;overflow-y:auto;
+  box-shadow:0 24px 60px rgba(24,18,10,.3);animation:slideup .25s}
+.modal-lg{max-width:680px}
+.modal-title{font-family:'Black Han Sans',sans-serif;font-size:19px;margin-bottom:18px;
+  padding-bottom:12px;border-bottom:2px solid var(--gold)}
+.modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+@keyframes slideup{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+/* ═══ TOAST ══════════════════════════════════════════════════ */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+  background:var(--ink);color:#fff;padding:10px 20px;border-radius:30px;
+  font-size:13px;font-weight:500;z-index:9999;opacity:0;transition:opacity .3s;
+  pointer-events:none;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.3)}
+#toast.show{opacity:1}
+
+/* ═══ HOME TAB ════════════════════════════════════════════════ */
+.home-hero{text-align:center;margin-bottom:32px;padding:32px 0 8px}
+.home-hero h1{font-family:'Black Han Sans',sans-serif;font-size:32px;letter-spacing:2px;margin-bottom:8px;color:var(--ink)}
+.home-hero p{color:var(--muted);font-size:14px}
+.project-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px}
+.project-card{background:var(--white);border:1.5px solid var(--border);border-radius:12px;
+  padding:18px;cursor:pointer;transition:transform .18s,box-shadow .18s,border-color .18s}
+.project-card:hover{transform:translateY(-3px);box-shadow:0 8px 24px var(--shadow);border-color:var(--gold)}
+.project-card:active{transform:translateY(0)}
+.project-card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.project-card-title{font-family:'Noto Serif KR',serif;font-size:17px;font-weight:700;
+  margin-bottom:6px;line-height:1.4}
+.project-card-synopsis{color:var(--muted);font-size:12px;line-height:1.6;margin-bottom:12px;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.project-card-footer{display:flex;justify-content:space-between;align-items:center}
+.project-card-meta{font-size:11px;color:var(--muted)}
+
+/* ═══ EDITOR ═════════════════════════════════════════════════ */
+.editor-wrap{display:flex;height:calc(100vh - var(--header));overflow:hidden}
+.chapter-list{width:200px;flex-shrink:0;border-right:1px solid var(--border);transition:width .2s;
+  background:var(--white);display:flex;flex-direction:column;overflow:hidden;color:var(--ink)}
+.chapter-list-header{padding:12px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between}
+.chapter-list-body{flex:1;overflow-y:auto;padding:8px}
+.chapter-item{padding:9px 11px;border-radius:7px;cursor:pointer;margin-bottom:4px;
+  border:1.5px solid transparent;transition:all .15s}
+.chapter-item:hover{background:var(--cream)}
+.chapter-item.active{background:var(--gold-light);border-color:var(--gold)}
+.chapter-item-title{font-size:13px;font-weight:600;margin-bottom:3px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chapter-item-meta{display:flex;justify-content:space-between;font-size:10px;color:var(--muted)}
+.editor-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.editor-toolbar{padding:10px 16px;border-bottom:1px solid var(--border);background:var(--white);
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex-shrink:0}
+.editor-content{flex:1;overflow-y:auto;padding:28px 32px;background:var(--paper)}
+#prose-editor{width:100%;min-height:500px;border:none;outline:none;background:var(--paper);
+  font-family:'Noto Serif KR',serif;font-size:var(--editor-font-size,16px);line-height:2;color:var(--ink);
+  resize:none;box-shadow:none;padding:0}
+.wordcount{font-size:12px;color:var(--muted);background:var(--cream);
+  padding:3px 10px;border-radius:20px;white-space:nowrap}
+.symbol-palette{position:absolute;top:100%;left:0;right:0;z-index:300;
+  background:var(--white);border:1px solid var(--border);border-top:none;
+  box-shadow:0 6px 20px var(--shadow);padding:10px 14px;display:flex;flex-wrap:wrap;gap:6px;}
+.sym-btn{min-width:36px;height:36px;padding:0 8px;background:var(--cream);
+  border:1px solid var(--border);border-radius:7px;font-size:16px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-family:"Noto Serif KR",serif;transition:all .15s;}
+.sym-btn:hover,.sym-btn:active{background:var(--gold-light);border-color:var(--gold);}
+.editor-toolbar{position:relative;}
+
+.chapter-list-wrap { position:relative; }
+#chapter-collapse-btn {
+  width:16px; height:100%; flex-shrink:0;
+  background:var(--cream); border:none;
+  border-right:1px solid var(--border);
+  cursor:pointer; display:flex; align-items:center; justify-content:center;
+  font-size:10px; color:var(--muted);
+  transition:background .15s;
+}
+#chapter-collapse-btn:hover { background:var(--border); }
+
+/* ═══ STATUS COLORS ═══════════════════════════════════════════ */
+.s-기획중{background:#fff3e0;color:#b36a00}
+.s-집필중{background:#e8f4e8;color:#2d6e2d}
+.s-탈고{background:#e8eaf6;color:#3949ab}
+.s-연재중{background:#e0f7fa;color:#00696f}
+.s-완결{background:#f3e5f5;color:#7b1fa2}
+.s-초안{background:#f5f5f5;color:#666}
+.s-수정중{background:#fff3e0;color:#b36a00}
+.s-완료{background:#e8f4e8;color:#2d6e2d}
+
+/* ═══ DIAGRAM ════════════════════════════════════════════════ */
+.diagram-wrap{display:flex;flex-direction:column;height:calc(100vh - var(--header));overflow:hidden}
+.diagram-toolbar{padding:10px 16px;border-bottom:1px solid var(--border);background:var(--white);
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;flex-shrink:0}
+.diagram-canvas-wrap{flex:1;position:relative;overflow:hidden;background:var(--paper);
+  background-image:radial-gradient(circle,#d9cfbb 1px,transparent 1px);
+  background-size:24px 24px}
+#diagram-canvas{position:absolute;inset:0;width:100%;height:100%;cursor:grab}
+#diagram-canvas.grabbing{cursor:grabbing}
+.dg-node{position:absolute;border-radius:10px;padding:10px 14px;cursor:grab;
+  user-select:none;transition:box-shadow .15s;min-width:100px;max-width:180px;
+  text-align:center;font-size:12px;font-weight:600;border:2px solid transparent;
+  display:flex;flex-direction:column;align-items:center;gap:4px}
+.dg-node:active{cursor:grabbing}
+.dg-node.selected{outline:3px solid var(--gold);outline-offset:2px}
+.dg-node.type-character{background:#fff3e0;border-color:#e8bc5c;color:#7a4a00}
+.dg-node.type-place{background:#e8f4e8;border-color:#4caf50;color:#1b5e20}
+.dg-node.type-event{background:#e8eaf6;border-color:#7986cb;color:#283593}
+.dg-node.type-idea{background:#fce4ec;border-color:#f48fb1;color:#880e4f}
+.dg-node.type-world{background:#e0f7fa;border-color:#4dd0e1;color:#006064}
+.dg-node.type-memo{background:#fffde7;border-color:#ffee58;color:#827717}
+.dg-node-icon{font-size:18px}
+.dg-node-label{word-break:break-all;line-height:1.3}
+.dg-node-sub{font-size:10px;font-weight:400;opacity:.7;line-height:1.3}
+.diagram-tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+.diagram-tab{padding:5px 14px;border-radius:20px;font-size:12px;font-weight:600;
+  cursor:pointer;border:1.5px solid var(--border);background:transparent;color:var(--muted);
+  white-space:nowrap;font-family:'Noto Sans KR',sans-serif;transition:all .15s}
+.diagram-tab.active{background:var(--gold);color:#fff;border-color:var(--gold)}
+.diagram-tab:hover:not(.active){background:var(--cream);border-color:var(--gold)}
+
+/* ═══ PROGRESS BAR ════════════════════════════════════════════ */
+.progress-bar{height:10px;background:var(--cream);border-radius:10px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--gold),var(--teal2));
+  border-radius:10px;transition:width .5s ease}
+
+/* ═══ RELATION MAP ════════════════════════════════════════════ */
+.rel-map{display:grid;gap:10px}
+.rel-row{display:flex;align-items:center;gap:10px;padding:10px 14px;
+  background:var(--cream);border-radius:8px;font-size:13px}
+.rel-from,.rel-to{font-weight:600;min-width:80px}
+.rel-arrow{color:var(--muted);flex:1;text-align:center;font-size:12px;position:relative}
+.rel-arrow::before,.rel-arrow::after{content:'';position:absolute;top:50%;height:1px;
+  background:var(--border);width:calc(50% - 20px)}
+.rel-arrow::before{left:0}.rel-arrow::after{right:0}
+
+/* ═══ PLOT KANBAN ════════════════════════════════════════════ */
+.arc-list{display:flex;gap:14px;overflow-x:auto;padding-bottom:8px}
+.arc-col{min-width:220px;max-width:220px;background:var(--cream);
+  border-radius:10px;padding:12px;flex-shrink:0}
+.arc-col-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.arc-col-title{font-weight:700;font-size:13px}
+.scene-card{background:var(--white);border:1px solid var(--border);border-radius:8px;
+  padding:10px 12px;margin-bottom:8px;font-size:12px;cursor:pointer;
+  transition:box-shadow .15s}
+.scene-card:hover{box-shadow:0 2px 8px var(--shadow)}
+.scene-card-title{font-weight:600;margin-bottom:4px}
+.scene-card-type{display:inline-block;padding:1px 7px;border-radius:10px;
+  font-size:10px;font-weight:600;background:var(--cream);color:var(--muted)}
+
+/* ═══ MEMO ═══════════════════════════════════════════════════ */
+.memo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
+.memo-card{background:var(--white);border:1.5px solid var(--border);border-radius:10px;
+  padding:0;overflow:hidden;box-shadow:0 2px 8px var(--shadow);color:#1a1208 !important;
+  display:flex;flex-direction:column;transition:box-shadow .15s}
+.memo-card:hover{box-shadow:0 4px 16px var(--shadow)}
+.memo-card-header{padding:10px 14px 6px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.memo-card-title{font-size:13px;font-weight:700;color:var(--ink);flex:1;border:none;outline:none;
+  background:transparent;font-family:'Noto Sans KR',sans-serif;padding:0}
+.memo-card-body{flex:1;padding:10px 14px;font-size:13px;line-height:1.7;color:var(--ink);
+  border:none;outline:none;resize:none;background:transparent;
+  font-family:'Noto Serif KR',serif;min-height:120px}
+.memo-color-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;cursor:pointer;border:2px solid transparent}
+.memo-color-dot:hover{border-color:var(--gold)}
+
+/* ═══ MANUSCRIPT ════════════════════════════════════════════ */
+.ms-preview{
+  background:#fff;box-shadow:0 4px 24px rgba(0,0,0,.12);
+  margin:0 auto;padding:0;transition:all .3s;position:relative;
+}
+.ms-page{
+  padding:var(--ms-pad-v) var(--ms-pad-h);
+  font-family:var(--ms-font);font-size:var(--ms-size);
+  line-height:var(--ms-line);color:#1a1208;
+  min-height:var(--ms-height);word-break:keep-all;
+  white-space:pre-wrap;
+}
+.ms-header{
+  border-bottom:1px solid #e0e0e0;padding:10px 20px;
+  display:flex;justify-content:space-between;align-items:center;
+  font-size:11px;color:#999;background:#fafafa;
+}
+
+/* ═══ SPLIT PANEL ═══════════════════════════════════════════ */
+.editor-wrap { display:flex; flex-direction:row; flex:1; overflow:hidden; }
+.chapter-list-wrap { position:relative; flex-shrink:0; display:flex; }
+.chapter-list-wrap .chapter-list { transition:width .2s; overflow:hidden; }
+.chapter-list-wrap .chapter-list.collapsed { width:0 !important; border:none !important; }
+.editor-area { flex:1; overflow:hidden; display:flex; flex-direction:column; }
+#split-panel {
+  width:360px; flex-shrink:0; border-left:1.5px solid var(--border);
+  background:var(--paper); display:flex; flex-direction:column;
+  overflow:hidden; transition:all .2s;
+}
+#split-panel.hidden { display:none !important; }
+@media (max-width: 768px) {
+  #split-panel:not(.hidden) { width:100% !important; max-height:45vh; border-left:none; border-top:1.5px solid var(--border); }
+}
+.split-panel-tabs {
+  display:flex; gap:2px; padding:8px 10px 0;
+  border-bottom:1px solid var(--border); background:var(--cream);
+  flex-shrink:0;
+}
+.split-tab {
+  padding:6px 12px; border-radius:8px 8px 0 0; font-size:12px;
+  font-weight:700; cursor:pointer; border:none; background:transparent;
+  color:var(--muted); font-family:'Noto Sans KR',sans-serif;
+  transition:all .15s; white-space:nowrap;
+}
+.split-tab.active {
+  background:var(--white); color:var(--gold);
+  border:1.5px solid var(--border); border-bottom:1.5px solid var(--white);
+}
+.split-panel-content { flex:1; overflow-y:auto; padding:16px; }
+@media (max-width: 768px) {
+  #split-panel { width:100% !important; border-left:none; border-top:1.5px solid var(--border); }
+  .editor-wrap { flex-direction:column; }
+}
+
+/* ═══ RESPONSIVE ════════════════════════════════════════════ */
+@media (max-width: 520px) {
+  header { padding:0 8px; gap:4px; }
+  #header-title { font-size:13px; letter-spacing:0; }
+  #header-title span { font-size:8px; }
+  .header-btn { padding:5px 8px; font-size:11px; }
+  #btn-darkmode { padding:4px 7px; font-size:14px; }
+  .btn-text { display:none; }
+}
+@media(max-width:768px){
+  :root{--sidebar:0px;--header:50px}
+  #sidebar{position:fixed;left:0;top:var(--header);height:calc(100vh - var(--header));
+    width:260px;z-index:160;transform:translateX(-100%);transition:transform .25s ease}
+  #sidebar.open{transform:translateX(0)}
+  #sidebar-overlay{display:block}
+  #main{padding:16px}
+  .form-grid{grid-template-columns:1fr}
+  .form-grid .full{grid-column:1}
+  .project-grid{grid-template-columns:1fr}
+  .editor-wrap{flex-direction:column}
+  .chapter-list{width:100%;height:auto;max-height:45vh;border-right:none;border-bottom:1px solid var(--border)}
+  .editor-content{padding:16px}
+  #prose-editor{font-size:var(--editor-font-size,16px)}
+  .home-hero h1{font-size:24px}
+  .arc-list{flex-direction:column}
+  .arc-col{min-width:unset;max-width:unset}
+  #header-project{display:none}
+}
+@media(min-width:769px) and (max-width:1024px){
+  :root{--sidebar:200px}
+  .form-grid{grid-template-columns:1fr 1fr}
+  #prose-editor{font-size:var(--editor-font-size,16px)}
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- HEADER -->
+  <header id="header">
+    <button id="header-title" onclick="goHome()">웹소설 스튜디오 <span style="font-size:10px;font-weight:400;color:var(--gold2);letter-spacing:.5px;margin-left:2px">v0.2 beta</span></button>
+    <button class="header-btn" id="menu-toggle" onclick="toggleSidebar()" style="display:none;padding:6px 8px">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- 왼쪽 세로선 -->
+        <rect x="1" y="1" width="4" height="16" rx="1.5" fill="rgba(255,255,255,0.7)"/>
+        <!-- 오른쪽 가로선 3개 -->
+        <line x1="7.5" y1="5" x2="16.5" y2="5" stroke="rgba(255,255,255,0.8)" stroke-width="1.8" stroke-linecap="round"/>
+        <line x1="7.5" y1="9" x2="16.5" y2="9" stroke="rgba(255,255,255,0.8)" stroke-width="1.8" stroke-linecap="round"/>
+        <line x1="7.5" y1="13" x2="16.5" y2="13" stroke="rgba(255,255,255,0.8)" stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+    </button>
+    <span id="header-sep" style="color:rgba(255,255,255,.3);display:none">›</span>
+    <span id="header-project"></span>
+    <div id="header-spacer"></div>
+    <div id="header-actions" style="display:flex;align-items:center;gap:4px;flex-shrink:0">
+      <button class="header-btn" onclick="toggleDarkMode()" id="btn-darkmode" title="다크모드 전환" style="font-size:16px;padding:5px 8px">🌙</button>
+      <button class="header-btn" onclick="showExportModal()" id="btn-export" style="display:none">📤 <span class="btn-text">내보내기</span></button>
+      <button class="header-btn" onclick="document.getElementById('import-file').click()" id="btn-import" style="display:none">📂 <span class="btn-text">불러오기</span></button>
+      <button class="header-btn gold" onclick="showNewProjectModal()">＋ <span class="btn-text">새 작품</span></button>
+    </div>
+    <input type="file" id="import-file" accept=".json" style="display:none" onchange="importData(event)">
+  </header>
+
+  <!-- SIDEBAR OVERLAY (mobile) -->
+  <div id="sidebar-overlay" style="display:none" onclick="closeSidebar()"></div>
+
+  <!-- BODY -->
+  <div id="body">
+    <!-- SIDEBAR -->
+    <nav id="sidebar" style="display:none">
+      <div class="sidebar-project-info">
+        <div class="sidebar-project-title" id="sidebar-project-title"></div>
+        <div id="sidebar-project-status"></div>
+      </div>
+      <div class="sidebar-nav">
+        <div class="nav-section">작품 관리</div>
+        <button class="nav-item" onclick="navigate('overview')" data-tab="overview">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          작품 개요 <span class="nav-badge" id="badge-overview"></span>
+        </button>
+        <button class="nav-item" onclick="navigate('characters')" data-tab="characters">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          등장인물 <span class="nav-badge" id="badge-characters"></span>
+        </button>
+        <button class="nav-item" onclick="navigate('relations')" data-tab="relations">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="5" cy="18" r="3"/><circle cx="19" cy="18" r="3"/><line x1="12" y1="13" x2="5" y2="15"/><line x1="12" y1="13" x2="19" y2="15"/></svg>
+          인물 관계도
+        </button>
+        <div class="nav-section">세계관</div>
+        <button class="nav-item" onclick="navigate('world')" data-tab="world">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+          세계관 설정 <span class="nav-badge" id="badge-world"></span>
+        </button>
+        <div class="nav-section">스토리</div>
+        <button class="nav-item" onclick="navigate('plot')" data-tab="plot">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/></svg>
+          플롯 구성 <span class="nav-badge" id="badge-plot"></span>
+        </button>
+        <button class="nav-item" onclick="navigate('chapters')" data-tab="chapters">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          집필 편집기 <span class="nav-badge" id="badge-chapters"></span>
+        </button>
+        <div class="nav-section">시각화</div>
+        <button class="nav-item" onclick="navigate('diagram')" data-tab="diagram">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><circle cx="5" cy="19" r="3"/><circle cx="19" cy="19" r="3"/><line x1="12" y1="8" x2="12" y2="14"/><line x1="12" y1="14" x2="5" y2="16"/><line x1="12" y1="14" x2="19" y2="16"/></svg>
+          다이어그램
+        </button>
+        <div class="nav-section">메모</div>
+        <button class="nav-item" onclick="navigate('memo')" data-tab="memo">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+          메모장
+        </button>
+        <div class="nav-section">출고</div>
+        <button class="nav-item" onclick="navigate('manuscript')" data-tab="manuscript">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="21" x2="9" y2="3"/></svg>
+          원고 설정
+        </button>
+        <button class="nav-item" onclick="navigate('schedule')" data-tab="schedule">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          연재 관리
+        </button>
+      </div>
+      <div class="sidebar-footer">
+        <button class="btn btn-outline btn-sm" style="width:100%;justify-content:center" onclick="goHome()">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          작품 목록으로
+        </button>
+      </div>
+    </nav>
+
+    <!-- MAIN -->
+    <main id="main"></main>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+const STORAGE_KEY = 'wnstudio_v1';
+let state = {
+  projects: [],
+  activeProjectId: null,
+  activeTab: 'home',
+};
+
+function getProject() {
+  return state.projects.find(p => p.id === state.activeProjectId);
+}
+
+function saveToStorage() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.projects)); } catch(e) {}
+}
+
+function loadFromStorage() {
+  try {
+    // 이전 버전 키에서 마이그레이션
+    const OLD_KEYS = ['wnstudio_v3', 'wnstudio_v2'];
+    for (const oldKey of OLD_KEYS) {
+      const old = localStorage.getItem(oldKey);
+      if (old && !localStorage.getItem(STORAGE_KEY)) {
+        try {
+          const parsed = JSON.parse(old);
+          if (Array.isArray(parsed)) {
+            localStorage.setItem(STORAGE_KEY, old);
+            localStorage.removeItem(oldKey);
+          }
+        } catch(e) {}
+      }
+    }
+    const d = localStorage.getItem(STORAGE_KEY);
+    if (d) {
+      const parsed = JSON.parse(d);
+      state.projects = Array.isArray(parsed) ? parsed : [];
+    }
+  } catch(e) {
+    state.projects = [];
+    localStorage.removeItem(STORAGE_KEY);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// EXPORT / IMPORT
+// ═══════════════════════════════════════════════════════════════
+function exportData() {
+  const p = getProject();
+  if (!p) return;
+  const blob = new Blob([JSON.stringify(p, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (p.title || '웹소설') + '_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  toast('저장 파일을 다운로드했습니다 📁');
+}
+
+function importData(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (ev) => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      // 전체 백업 (배열) 처리
+      if (Array.isArray(data)) {
+        if (!confirm(`전체 백업 파일입니다. 작품 ${data.length}개를 불러올까요?\n(같은 ID의 작품은 덮어씁니다)`)) return;
+        data.forEach(p => {
+          if (!p.id) p.id = Date.now() + Math.random();
+          const idx = state.projects.findIndex(x => x.id === p.id);
+          if (idx >= 0) state.projects[idx] = p;
+          else state.projects.push(p);
+        });
+        saveToStorage();
+        toast(`전체 백업 불러오기 완료! (${data.length}개) 📖`);
+        renderHome();
+        return;
+      }
+      // 단일 작품 처리
+      if (!data.id) data.id = Date.now();
+      const exists = state.projects.findIndex(p => p.id === data.id);
+      if (exists >= 0) {
+        if (confirm('같은 ID의 작품이 있습니다. 덮어쓸까요?')) {
+          state.projects[exists] = data;
         }
-        return res;
-      })
-      .catch(() =>
-        caches.match(e.request).then(cached =>
-          cached || caches.match('/novel-studio/index.html')
-        )
-      )
-  );
+      } else {
+        state.projects.push(data);
+      }
+      saveToStorage();
+      toast('불러오기 완료! 📖');
+      renderHome();
+    } catch(err) { toast('파일을 읽을 수 없습니다.'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════════════
+function goHome() {
+  state.activeProjectId = null;
+  state.activeTab = 'home';
+  document.getElementById('sidebar').style.display = 'none';
+  document.getElementById('menu-toggle').style.display = 'none';
+  document.getElementById('header-sep').style.display = 'none';
+  document.getElementById('header-project').textContent = '';
+  document.getElementById('btn-export').style.display = 'none';
+  document.getElementById('btn-import').style.display = 'none';
+  document.getElementById('main').classList.remove('no-pad');
+  closeSidebar();
+  renderHome();
+}
+
+function openProject(id) {
+  state.activeProjectId = id;
+  state.activeTab = 'overview';
+  const p = getProject();
+  document.getElementById('sidebar').style.display = 'flex';
+  document.getElementById('menu-toggle').style.display = 'inline-flex';
+  document.getElementById('header-sep').style.display = 'inline';
+  document.getElementById('header-project').textContent = p.title || '제목 없음';
+  document.getElementById('btn-export').style.display = 'inline-flex';
+  document.getElementById('btn-import').style.display = 'inline-flex';
+  document.getElementById('sidebar-project-title').textContent = p.title || '제목 없음';
+  document.getElementById('sidebar-project-status').innerHTML = statusBadge(p.status);
+  navigate('overview');
+}
+
+function navigate(tab) {
+  state.activeTab = tab;
+  document.querySelectorAll('.nav-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.tab === tab);
+  });
+  document.getElementById('main').classList.toggle('no-pad', tab === 'chapters');
+  closeSidebar();
+  updateBadges();
+  const renders = {
+    overview: renderOverview,
+    characters: renderCharacters,
+    relations: renderRelations,
+    world: renderWorld,
+    plot: renderPlot,
+    chapters: renderChapters,
+    schedule: renderSchedule,
+    diagram: renderDiagram,
+    manuscript: renderManuscript,
+    memo: renderMemo,
+  };
+  if (renders[tab]) renders[tab]();
+}
+
+function toggleSidebar() {
+  const sb  = document.getElementById('sidebar');
+  const ov  = document.getElementById('sidebar-overlay');
+  const btn = document.getElementById('menu-toggle');
+  const isMobile = window.innerWidth <= 768;
+
+  if (isMobile) {
+    // 모바일: open 클래스 토글
+    const isOpen = sb.classList.contains('open');
+    if (isOpen) {
+      sb.classList.remove('open');
+      ov.style.display = 'none';
+    } else {
+      sb.classList.add('open');
+      ov.style.display = 'block';
+    }
+  } else {
+    // PC/태블릿: sidebar 자체를 숨기거나 보이게
+    const isHidden = sb.style.display === 'none' || sb.classList.contains('hidden');
+    if (isHidden) {
+      sb.style.display = 'flex';
+      sb.classList.remove('hidden');
+      if (btn) { btn.style.opacity = '1'; }
+    } else {
+      sb.style.display = 'none';
+      sb.classList.add('hidden');
+      if (btn) { btn.style.opacity = '0.5'; }
+    }
+  }
+}
+function closeSidebar() {
+  if (window.innerWidth <= 768) {
+    document.getElementById('sidebar').classList.remove('open');
+    document.getElementById('sidebar-overlay').style.display = 'none';
+  }
+}
+
+function updateBadges() {
+  const p = getProject();
+  if (!p) return;
+  const b = {
+    characters: (p.characters||[]).length,
+    world: (p.worldSettings||[]).length,
+    plot: (p.arcs||[]).length,
+    chapters: (p.chapters||[]).length,
+  };
+  Object.entries(b).forEach(([k,v]) => {
+    const el = document.getElementById('badge-'+k);
+    if (el) el.textContent = v || '';
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════
+const GENRES = ['판타지','현대 판타지','로맨스','로맨스 판타지','무협','SF','스릴러','호러','일상물','기타'];
+const STATUSES = ['기획중','집필중','탈고','연재중','완결'];
+const ROLES = ['주인공','히로인/히어로','조력자','악역','중립','조연','단역'];
+const WORLD_CATS = ['지리/장소','역사/문화','마법/능력 체계','사회/정치','종족/계층','용어 사전','기타'];
+const SCENE_TYPES = ['평범','긴장감','갈등','전투','로맨스','반전','복선','클라이맥스'];
+const CH_STATUSES = ['초안','수정중','완료'];
+const PLATFORMS = ['카카오페이지','네이버 시리즈','문피아','조아라','리디','기타'];
+
+function uid() { return Date.now() + Math.random().toString(36).slice(2,6); }
+function esc(s) { return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function statusBadge(s) {
+  return `<span class="status-badge s-${esc(s)}">${esc(s)}</span>`;
+}
+function selOpts(arr, val) {
+  return arr.map(a => `<option value="${esc(a)}" ${a===val?'selected':''}>${esc(a)}</option>`).join('');
+}
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+function autoSave() { saveToStorage(); updateBadges(); }
+
+// ═══════════════════════════════════════════════════════════════
+// HOME
+// ═══════════════════════════════════════════════════════════════
+function renderHome() {
+  const main = document.getElementById('main');
+  main.classList.remove('no-pad');
+  const projects = state.projects;
+  let cards = '';
+  if (projects.length === 0) {
+    cards = `<div class="card empty-state"><div class="emoji">📖</div><p>아직 작품이 없습니다.<br>첫 번째 이야기를 시작해보세요!</p></div>`;
+  } else {
+    cards = `<div class="project-grid">` + projects.map(p => {
+      const wordCount = (p.chapters||[]).reduce((a,c) => a+(c.content||'').length, 0);
+      return `
+      <div class="project-card" onclick="openProject('${p.id}')">
+        <div class="project-card-header">
+          <span class="tag">${esc(p.genre)}</span>
+          ${statusBadge(p.status)}
+        </div>
+        <div class="project-card-title">${esc(p.title||'제목 없음')}</div>
+        <div class="project-card-synopsis">${esc(p.synopsis||'줄거리가 없습니다.')}</div>
+        <div class="project-card-footer">
+          <span class="project-card-meta">${(p.chapters||[]).length}화 · ${wordCount.toLocaleString()}자</span>
+          <button class="btn btn-danger btn-sm" onclick="event.stopPropagation();deleteProject('${p.id}')">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            삭제
+          </button>
+        </div>
+      </div>`;
+    }).join('') + `</div>`;
+  }
+  main.innerHTML = `
+    <div style="max-width:900px;margin:0 auto">
+      <div class="home-hero">
+        <h1>웹소설 스튜디오</h1>
+        <p>아이디어에서 완성작까지 — 당신의 이야기를 완성하세요</p>
+        <span style="font-size:12px;color:var(--border);font-family:'Noto Serif KR',serif;letter-spacing:.5px;font-weight:400;display:block;margin-top:6px">제작자 : 파쿠스티나 with Claude</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:10px">
+        <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+          <div style="font-size:13px;color:var(--muted)">${projects.length}개의 작품</div>
+          <div id="storage-indicator" style="display:flex;align-items:center;gap:8px"></div>
+        </div>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-outline btn-sm" onclick="document.getElementById('import-file').click()">
+            📂 파일 불러오기
+          </button>
+          <button class="btn btn-gold" onclick="showNewProjectModal()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            새 작품 만들기
+          </button>
+        </div>
+      </div>
+      ${cards}
+    </div>`;
+  setTimeout(renderStorageIndicator, 0);
+}
+
+function deleteProject(id) {
+  confirmDialog('이 작품을 삭제합니다. 복구할 수 없습니다.', () => {
+  state.projects = state.projects.filter(p => p.id !== id);
+  saveToStorage();
+  renderHome();
+  toast('작품이 삭제되었습니다.');
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// NEW PROJECT MODAL
+// ═══════════════════════════════════════════════════════════════
+function showNewProjectModal() {
+  showModal(`
+    <div class="modal-title">✨ 새 작품 만들기</div>
+    <div class="form-grid">
+      <div class="full"><label class="label">작품 제목 *</label><input id="np-title" placeholder="임시 제목도 괜찮아요!"></div>
+      <div><label class="label">장르</label><select id="np-genre">${selOpts(GENRES,'판타지')}</select></div>
+      <div><label class="label">상태</label><select id="np-status">${selOpts(STATUSES,'기획중')}</select></div>
+      <div class="full"><label class="label">타겟 독자층</label><input id="np-target" placeholder="예: 20~30대 여성, 판타지 팬"></div>
+      <div class="full"><label class="label">줄거리 (선택)</label><textarea id="np-synopsis" rows="4" placeholder="아이디어가 있다면 적어보세요..."></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">취소</button>
+      <button class="btn btn-gold" onclick="createProject()">만들기</button>
+    </div>
+  `, false);
+  setTimeout(() => document.getElementById('np-title')?.focus(), 100);
+}
+
+function createProject() {
+  const title = document.getElementById('np-title').value.trim();
+  if (!title) { toast('제목을 입력해주세요.'); return; }
+  const p = {
+    id: uid(),
+    title,
+    genre: document.getElementById('np-genre').value,
+    status: document.getElementById('np-status').value,
+    targetAudience: document.getElementById('np-target').value,
+    synopsis: document.getElementById('np-synopsis').value,
+    memo: '',
+    platform: '', uploadCycle: '', targetChapters: '', startDate: '',
+    characters: [], worldSettings: [], arcs: [], chapters: [], relations: [],
+    createdAt: new Date().toISOString(),
+  };
+  state.projects.push(p);
+  saveToStorage();
+  closeModal();
+  openProject(p.id);
+  toast('새 작품이 만들어졌습니다! 🎉');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// OVERVIEW
+// ═══════════════════════════════════════════════════════════════
+function renderOverview() {
+  const p = getProject();
+  const wordCount = (p.chapters||[]).reduce((a,c) => a+(c.content||'').length, 0);
+  document.getElementById('main').innerHTML = `
+    <div style="max-width:780px;margin:0 auto">
+      <div class="font-display" style="font-size:22px;margin-bottom:22px">작품 개요</div>
+      <div style="display:grid;gap:16px">
+
+        <div class="card">
+          <div class="sec-title">기본 정보</div>
+          <div class="form-grid">
+            <div class="full"><label class="label">작품 제목</label><input id="ov-title" value="${esc(p.title)}" oninput="updateProject('title',this.value)" placeholder="작품 제목"></div>
+            <div><label class="label">장르</label><select id="ov-genre" onchange="updateProject('genre',this.value)">${selOpts(GENRES,p.genre)}</select></div>
+            <div><label class="label">연재 상태</label><select id="ov-status" onchange="updateProject('status',this.value)">${selOpts(STATUSES,p.status)}</select></div>
+            <div class="full"><label class="label">타겟 독자층</label><input value="${esc(p.targetAudience||'')}" oninput="updateProject('targetAudience',this.value)" placeholder="예: 20~30대 여성"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="sec-title">줄거리</div>
+          <textarea rows="6" oninput="updateProject('synopsis',this.value)" placeholder="작품의 전체 줄거리를 입력하세요...">${esc(p.synopsis||'')}</textarea>
+        </div>
+
+        <div class="card">
+          <div class="sec-title">작가 메모</div>
+          <textarea rows="4" oninput="updateProject('memo',this.value)" placeholder="영감, 참고 자료, 메모를 자유롭게 기록하세요...">${esc(p.memo||'')}</textarea>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+          ${[
+            {label:'등장인물', val:(p.characters||[]).length, unit:'명'},
+            {label:'세계관 설정', val:(p.worldSettings||[]).length, unit:'개'},
+            {label:'플롯 아크', val:(p.arcs||[]).length, unit:'개'},
+            {label:'총 집필량', val:wordCount.toLocaleString(), unit:'자'},
+          ].map(s => `
+            <div class="card" style="text-align:center;padding:16px 10px">
+              <div class="font-display" style="font-size:24px;color:var(--gold)">${s.val}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">${s.label} ${s.unit}</div>
+            </div>`).join('')}
+        </div>
+      </div>
+    </div>`;
+}
+
+function updateProject(key, val) {
+  const p = getProject();
+  if (!p) return;
+  p[key] = val;
+  autoSave();
+  // update header & sidebar
+  if (key === 'title') {
+    document.getElementById('header-project').textContent = val || '제목 없음';
+    document.getElementById('sidebar-project-title').textContent = val || '제목 없음';
+  }
+  if (key === 'status') {
+    document.getElementById('sidebar-project-status').innerHTML = statusBadge(val);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CHARACTERS
+// ═══════════════════════════════════════════════════════════════
+function renderCharacters() {
+  const p = getProject();
+  const chars = p.characters || [];
+  const list = chars.length === 0
+    ? `<div class="card empty-state"><div class="emoji">👤</div><p>캐릭터를 추가해보세요.</p></div>`
+    : chars.map((c,i) => `
+      <div class="card" style="margin-bottom:14px">
+        <div style="display:flex;gap:14px;align-items:flex-start">
+          <div style="width:50px;height:50px;border-radius:50%;background:hsl(${(c.id.charCodeAt(0)*7)%360},30%,65%);
+            display:flex;align-items:center;justify-content:center;font-size:20px;font-family:'Black Han Sans',sans-serif;flex-shrink:0;color:#fff">
+            ${esc(c.name?.[0]||'?')}
+          </div>
+          <div style="flex:1;min-width:0">
+            <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+              <span class="font-serif" style="font-size:16px;font-weight:700">${esc(c.name)}</span>
+              <span class="tag">${esc(c.role)}</span>
+              ${c.age?`<span class="tag">${esc(c.age)}세</span>`:''}
+            </div>
+            ${c.appearance?`<div style="font-size:12px;color:var(--muted);margin-bottom:3px">외모: ${esc(c.appearance)}</div>`:''}
+            ${c.personality?`<div style="font-size:13px;color:var(--ink);line-height:1.6;margin-bottom:4px">${esc(c.personality)}</div>`:''}
+            ${c.background?`<div style="font-size:12px;color:var(--muted);margin-bottom:4px">배경: ${esc(c.background)}</div>`:''}
+            ${c.speech?`<div style="font-size:12px;color:var(--teal)">말투: ${esc(c.speech)}</div>`:''}
+          </div>
+          <div style="display:flex;gap:6px;flex-shrink:0">
+            <button class="btn-icon" onclick="showCharModal(${i})" title="수정">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button onclick="deleteChar(${i})" title="삭제"
+              style="width:34px;height:34px;border-radius:50%;background:rgba(181,69,27,.1);
+                border:none;cursor:pointer;color:var(--rust);font-size:16px;font-weight:700;
+                display:flex;align-items:center;justify-content:center">×</button>
+          </div>
+        </div>
+      </div>`).join('');
+
+  document.getElementById('main').innerHTML = `
+    <div style="max-width:780px;margin:0 auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px">
+        <div class="font-display" style="font-size:22px">등장인물 (${chars.length})</div>
+        <button class="btn btn-gold" onclick="showCharModal()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          캐릭터 추가
+        </button>
+      </div>
+      ${list}
+    </div>`;
+}
+
+function showCharModal(idx) {
+  const p = getProject();
+  const c = idx !== undefined ? p.characters[idx] : {};
+  showModal(`
+    <div class="modal-title">${idx !== undefined ? '캐릭터 수정' : '캐릭터 추가'}</div>
+    <div class="form-grid">
+      <div><label class="label">이름 *</label><input id="cm-name" value="${esc(c.name||'')}" placeholder="캐릭터 이름"></div>
+      <div><label class="label">역할</label><select id="cm-role">${selOpts(ROLES,c.role||'주인공')}</select></div>
+      <div><label class="label">나이</label><input id="cm-age" value="${esc(c.age||'')}" placeholder="예: 24"></div>
+      <div><label class="label">외모</label><input id="cm-app" value="${esc(c.appearance||'')}" placeholder="예: 은발, 붉은 눈"></div>
+      <div class="full"><label class="label">성격</label><textarea id="cm-per" rows="2" placeholder="성격 설명">${esc(c.personality||'')}</textarea></div>
+      <div class="full"><label class="label">배경 / 과거</label><textarea id="cm-bg" rows="3" placeholder="캐릭터 배경, 과거, 동기">${esc(c.background||'')}</textarea></div>
+      <div class="full"><label class="label">말투 / 특징</label><textarea id="cm-sp" rows="2" placeholder="말투 특징, 자주 쓰는 표현">${esc(c.speech||'')}</textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">취소</button>
+      <button class="btn btn-gold" onclick="saveChar(${idx})">저장</button>
+    </div>
+  `, false);
+  setTimeout(() => document.getElementById('cm-name')?.focus(), 100);
+}
+
+function saveChar(idx) {
+  const name = document.getElementById('cm-name').value.trim();
+  if (!name) { toast('이름을 입력해주세요.'); return; }
+  const c = {
+    id: idx !== undefined ? getProject().characters[idx].id : uid(),
+    name, role: document.getElementById('cm-role').value,
+    age: document.getElementById('cm-age').value,
+    appearance: document.getElementById('cm-app').value,
+    personality: document.getElementById('cm-per').value,
+    background: document.getElementById('cm-bg').value,
+    speech: document.getElementById('cm-sp').value,
+  };
+  const p = getProject();
+  if (idx !== undefined) p.characters[idx] = c;
+  else p.characters.push(c);
+  autoSave(); closeModal(); renderCharacters();
+  toast(idx !== undefined ? '수정했습니다.' : '캐릭터를 추가했습니다!');
+}
+
+function deleteChar(idx) {
+  confirmDialog('이 캐릭터를 삭제합니다.', () => {
+    getProject().characters.splice(idx, 1);
+    autoSave(); renderCharacters();
+    toast('캐릭터를 삭제했어요.');
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RELATIONS
+// ═══════════════════════════════════════════════════════════════
+function renderRelations() {
+  const p = getProject();
+  const chars = p.characters || [];
+  const rels = p.relations || [];
+  const charOpts = chars.map(c => `<option value="${esc(c.name)}">${esc(c.name)}</option>`).join('');
+
+  const relList = rels.length === 0
+    ? `<div style="text-align:center;padding:32px;color:var(--muted)">관계를 추가해보세요.</div>`
+    : rels.map((r,i) => `
+      <div class="rel-row">
+        <span class="rel-from">${esc(r.from)}</span>
+        <span class="rel-arrow">${esc(r.type)}</span>
+        <span class="rel-to">${esc(r.to)}</span>
+        <button class="btn-icon" onclick="deleteRelation(${i})" style="color:var(--rust);margin-left:auto">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>`).join('');
+
+  document.getElementById('main').innerHTML = `
+    <div style="max-width:780px;margin:0 auto">
+      <div class="font-display" style="font-size:22px;margin-bottom:22px">인물 관계도</div>
+      ${chars.length < 2
+        ? `<div class="card empty-state"><div class="emoji">🔗</div><p>등장인물을 2명 이상 추가하면<br>관계를 설정할 수 있습니다.</p></div>`
+        : `
+        <div class="card" style="margin-bottom:16px">
+          <div class="sec-title">관계 추가</div>
+          <div class="form-grid" style="align-items:end">
+            <div><label class="label">인물 A</label><select id="rel-from"><option value="">선택</option>${charOpts}</select></div>
+            <div><label class="label">관계 유형</label><input id="rel-type" placeholder="예: 연인, 라이벌, 스승, 형제"></div>
+            <div><label class="label">인물 B</label><select id="rel-to"><option value="">선택</option>${charOpts}</select></div>
+            <div><button class="btn btn-gold" style="width:100%" onclick="addRelation()">추가</button></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="sec-title">관계 목록</div>
+          <div class="rel-map">${relList}</div>
+        </div>`}
+    </div>`;
+}
+
+function addRelation() {
+  const from = document.getElementById('rel-from').value;
+  const to = document.getElementById('rel-to').value;
+  const type = document.getElementById('rel-type').value.trim();
+  if (!from || !to || !type) { toast('인물과 관계 유형을 모두 입력해주세요.'); return; }
+  if (from === to) { toast('같은 인물은 선택할 수 없습니다.'); return; }
+  const p = getProject();
+  if (!p.relations) p.relations = [];
+  p.relations.push({from, to, type});
+  autoSave(); renderRelations();
+}
+function deleteRelation(i) {
+  getProject().relations.splice(i,1);
+  autoSave(); renderRelations();
+  toast('관계를 삭제했어요.');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// WORLD
+// ═══════════════════════════════════════════════════════════════
+function renderWorld() {
+  const p = getProject();
+  const items = p.worldSettings || [];
+  const grouped = {};
+  WORLD_CATS.forEach(c => { grouped[c] = items.filter(i => i.category === c); });
+
+  let html = '';
+  WORLD_CATS.forEach(cat => {
+    const catItems = grouped[cat];
+    if (catItems.length === 0) return;
+    html += `<div style="margin-bottom:20px">
+      <div style="font-family:'Noto Serif KR',serif;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:10px;letter-spacing:1px">${esc(cat)}</div>
+      <div style="display:grid;gap:10px">
+        ${catItems.map(w => {
+          const idx = items.findIndex(i => i.id === w.id);
+          return `
+          <div class="card card-sm">
+            <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px">
+              <div style="flex:1">
+                <div style="font-weight:700;margin-bottom:6px">${esc(w.title)}</div>
+                <div style="color:var(--muted);font-size:13px;line-height:1.7;white-space:pre-wrap">${esc(w.content)}</div>
+              </div>
+              <div style="display:flex;gap:4px;flex-shrink:0">
+                <button class="btn-icon" onclick="showWorldModal(${idx})">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+                <button onclick="deleteWorld(${idx})" title="삭제"
+                  style="width:30px;height:30px;border-radius:50%;background:rgba(181,69,27,.1);
+                    border:none;cursor:pointer;color:var(--rust);font-size:15px;font-weight:700;
+                    display:flex;align-items:center;justify-content:center">×</button>
+              </div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  });
+
+  document.getElementById('main').innerHTML = `
+    <div style="max-width:780px;margin:0 auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px">
+        <div class="font-display" style="font-size:22px">세계관 설정 (${items.length})</div>
+        <button class="btn btn-gold" onclick="showWorldModal()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          설정 추가
+        </button>
+      </div>
+      ${items.length === 0
+        ? `<div class="card empty-state"><div class="emoji">🌍</div><p>세계관 설정을 추가해보세요.</p></div>`
+        : html}
+    </div>`;
+}
+
+function showWorldModal(idx) {
+  const p = getProject();
+  const w = idx !== undefined ? p.worldSettings[idx] : {};
+  showModal(`
+    <div class="modal-title">${idx !== undefined ? '설정 수정' : '설정 추가'}</div>
+    <div style="margin-bottom:12px"><label class="label">항목명 *</label><input id="wm-title" value="${esc(w.title||'')}" placeholder="설정 이름"></div>
+    <div style="margin-bottom:12px"><label class="label">카테고리</label><select id="wm-cat">${selOpts(WORLD_CATS,w.category||WORLD_CATS[0])}</select></div>
+    <div style="margin-bottom:20px"><label class="label">내용</label><textarea id="wm-content" rows="6" placeholder="설정 내용을 자세히 설명하세요">${esc(w.content||'')}</textarea></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">취소</button>
+      <button class="btn btn-gold" onclick="saveWorld(${idx})">저장</button>
+    </div>
+  `, false);
+  setTimeout(() => document.getElementById('wm-title')?.focus(), 100);
+}
+
+function saveWorld(idx) {
+  const title = document.getElementById('wm-title').value.trim();
+  if (!title) { toast('항목명을 입력해주세요.'); return; }
+  const w = {
+    id: idx !== undefined ? getProject().worldSettings[idx].id : uid(),
+    title, category: document.getElementById('wm-cat').value,
+    content: document.getElementById('wm-content').value,
+  };
+  const p = getProject();
+  if (idx !== undefined) p.worldSettings[idx] = w;
+  else p.worldSettings.push(w);
+  autoSave(); closeModal(); renderWorld();
+}
+function deleteWorld(idx) {
+  confirmDialog('이 세계관 설정을 삭제합니다.', () => {
+    getProject().worldSettings.splice(idx,1);
+    autoSave(); renderWorld();
+    toast('설정을 삭제했어요.');
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PLOT
+// ═══════════════════════════════════════════════════════════════
+function renderPlot() {
+  const p = getProject();
+  const arcs = p.arcs || [];
+
+  const cols = arcs.map((a, ai) => {
+    const scenes = (a.scenes || []).map((s, si) => `
+      <div style="position:relative;margin-bottom:8px">
+        <div class="scene-card" style="margin-bottom:0" onclick="showSceneModal(${ai},${si})">
+          <span class="font-display" style="color:var(--gold);font-size:11px">#${si+1}</span>
+          <div class="scene-card-title">${esc(s.title)}</div>
+          <span class="scene-card-type">${esc(s.type||'')}</span>
+          ${s.summary?`<div style="color:var(--muted);margin-top:4px;font-size:11px;line-height:1.5">${esc(s.summary)}</div>`:''}
+        </div>
+        <button
+          style="position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:50%;
+            background:rgba(181,69,27,0.12);border:none;cursor:pointer;
+            display:flex;align-items:center;justify-content:center;z-index:10;
+            color:var(--rust);font-size:13px;font-weight:700;line-height:1"
+          onclick="deleteScene(${ai},${si})">×</button>
+      </div>`).join('');
+
+    return `
+      <div class="arc-col">
+        <div class="arc-col-header">
+          <span class="arc-col-title">${esc(a.title)}</span>
+          <div style="display:flex;gap:4px">
+            <button class="btn-icon" onclick="showArcModal(${ai})" style="width:28px;height:28px">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button class="btn-icon" onclick="deleteArc(${ai})" style="color:var(--rust);width:28px;height:28px">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+            </button>
+          </div>
+        </div>
+        ${scenes}
+        <button class="btn btn-outline btn-sm" style="width:100%;justify-content:center;margin-top:4px" onclick="showSceneModal(${ai})">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          장면 추가
+        </button>
+      </div>`;
+  }).join('');
+
+  document.getElementById('main').innerHTML = `
+    <div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px">
+        <div class="font-display" style="font-size:22px">플롯 구성</div>
+        <button class="btn btn-gold" onclick="showArcModal()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          아크 추가
+        </button>
+      </div>
+      ${arcs.length === 0
+        ? `<div class="card empty-state"><div class="emoji">🗺️</div><p>스토리 아크를 추가하고<br>장면을 구성해보세요.</p></div>`
+        : `<div class="arc-list">${cols}</div>`}
+    </div>`;
+}
+
+function showArcModal(idx) {
+  const p = getProject();
+  const a = idx !== undefined ? p.arcs[idx] : {};
+  showModal(`
+    <div class="modal-title">${idx !== undefined ? '아크 수정' : '아크 추가'}</div>
+    <div style="margin-bottom:12px"><label class="label">아크 이름 *</label><input id="am-title" value="${esc(a.title||'')}" placeholder="예: 1부 - 각성편"></div>
+    <div style="margin-bottom:20px"><label class="label">설명</label><textarea id="am-desc" rows="3" placeholder="이 아크의 주요 사건">${esc(a.description||'')}</textarea></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">취소</button>
+      <button class="btn btn-gold" onclick="saveArc(${idx})">저장</button>
+    </div>
+  `, false);
+  setTimeout(() => document.getElementById('am-title')?.focus(), 100);
+}
+function saveArc(idx) {
+  const title = document.getElementById('am-title').value.trim();
+  if (!title) { toast('아크 이름을 입력해주세요.'); return; }
+  const a = { id: idx !== undefined ? getProject().arcs[idx].id : uid(), title, description: document.getElementById('am-desc').value, scenes: idx !== undefined ? getProject().arcs[idx].scenes : [] };
+  const p = getProject();
+  if (idx !== undefined) p.arcs[idx] = a;
+  else p.arcs.push(a);
+  autoSave(); closeModal(); renderPlot();
+}
+function deleteArc(idx) {
+  confirmDialog('이 아크와 모든 장면을 삭제합니다.', () => {
+    getProject().arcs.splice(idx,1);
+    autoSave(); renderPlot();
+    toast('아크를 삭제했어요.');
+  });
+}
+
+function showSceneModal(arcIdx, sceneIdx) {
+  const p = getProject();
+  const s = sceneIdx !== undefined ? p.arcs[arcIdx].scenes[sceneIdx] : {};
+  showModal(`
+    <div class="modal-title">${sceneIdx !== undefined ? '장면 수정' : '장면 추가'}</div>
+    <div class="form-grid">
+      <div><label class="label">장면 제목 *</label><input id="sm-title" value="${esc(s.title||'')}" placeholder="장면 이름"></div>
+      <div><label class="label">유형</label><select id="sm-type">${selOpts(SCENE_TYPES,s.type||SCENE_TYPES[0])}</select></div>
+      <div class="full"><label class="label">요약</label><textarea id="sm-sum" rows="3" placeholder="이 장면에서 일어나는 일">${esc(s.summary||'')}</textarea></div>
+      <div class="full"><label class="label">등장인물</label><input id="sm-chars" value="${esc(s.characters||'')}" placeholder="예: 이수한, 서아린"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">취소</button>
+      <button class="btn btn-gold" onclick="saveScene(${arcIdx},${sceneIdx})">저장</button>
+    </div>
+  `, false);
+  setTimeout(() => document.getElementById('sm-title')?.focus(), 100);
+}
+function saveScene(arcIdx, sceneIdx) {
+  const title = document.getElementById('sm-title').value.trim();
+  if (!title) { toast('장면 제목을 입력해주세요.'); return; }
+  const s = { id: sceneIdx !== undefined ? getProject().arcs[arcIdx].scenes[sceneIdx].id : uid(), title, type: document.getElementById('sm-type').value, summary: document.getElementById('sm-sum').value, characters: document.getElementById('sm-chars').value };
+  const p = getProject();
+  if (sceneIdx !== undefined) p.arcs[arcIdx].scenes[sceneIdx] = s;
+  else p.arcs[arcIdx].scenes.push(s);
+  autoSave(); closeModal(); renderPlot();
+}
+function deleteScene(arcIdx, sceneIdx) {
+  confirmDialog('이 장면을 삭제합니다.', () => {
+    getProject().arcs[arcIdx].scenes.splice(sceneIdx,1);
+    autoSave(); renderPlot();
+    toast('장면을 삭제했어요.');
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CHAPTERS (EDITOR)
+// ═══════════════════════════════════════════════════════════════
+let activeChapterId = null;
+
+function renderChapters() {
+  const p = getProject();
+  const chapters = p.chapters || [];
+  const ch = chapters.find(c => c.id === activeChapterId) || chapters[0];
+  if (ch) activeChapterId = ch.id;
+
+  const chList = chapters.map(c => `
+    <div class="chapter-item ${c.id===activeChapterId?'active':''}" onclick="selectChapter('${c.id}')">
+      <div class="chapter-item-title">${esc(c.title)}</div>
+      <div class="chapter-item-meta">
+        <span>${(c.content||'').length.toLocaleString()}자</span>
+        <span class="status-badge s-${esc(c.status)}" style="font-size:10px;padding:1px 6px">${esc(c.status)}</span>
+      </div>
+    </div>`).join('');
+
+  document.getElementById('main').innerHTML = `
+    <div class="editor-wrap">
+      <div class="chapter-list-wrap" id="chapter-list-wrap">
+        <div class="chapter-list" id="chapter-list">
+          <div class="chapter-list-header">
+            <span style="font-size:12px;font-weight:700;color:var(--muted)">화 목록</span>
+            <button class="btn btn-gold btn-sm" onclick="newChapter()">＋</button>
+          </div>
+          <div class="chapter-list-body">
+            ${chapters.length===0
+              ? '<div style="text-align:center;color:var(--muted);font-size:12px;padding:20px 0">화를 추가하세요</div>'
+              : chList}
+          </div>
+        </div>
+        <button id="chapter-collapse-btn" onclick="toggleChapterList()" title="화 목록 접기/펼치기">◀</button>
+      </div>
+      <div class="editor-area" id="editor-area">
+        ${ch ? renderEditorContent(ch) : `
+          <div style="flex:1;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:12px;color:var(--muted)">
+            <div style="font-size:36px">✍️</div>
+            <div>화를 선택하거나 새로 추가하세요</div>
+          </div>`}
+      </div>
+
+    </div>`;
+  setTimeout(() => { refreshShortcutBar(); applyEditorFontSize(); }, 0);
+}
+
+function renderEditorContent(ch) {
+  return `
+    <div class="editor-toolbar">
+      <input value="${esc(ch.title)}" onchange="updateChapter('${ch.id}','title',this.value)"
+        style="width:160px;font-weight:700;font-size:14px;flex-shrink:0">
+      <select onchange="updateChapter('${ch.id}','status',this.value)" style="width:90px;font-size:12px;flex-shrink:0">
+        ${selOpts(CH_STATUSES, ch.status||'초안')}
+      </select>
+      <span class="wordcount" id="wc-display">${(ch.content||'').length.toLocaleString()}자</span>
+      <div style="flex:1"></div>
+      <button class="btn btn-outline btn-sm" onclick="toggleSplitPanel()" id="split-toggle-btn" title="참고 패널" style="font-size:12px">
+        ⊞ 참고
+      </button>
+      <div style="display:flex;align-items:center;gap:4px;background:var(--cream);border:1px solid var(--border);border-radius:7px;padding:2px 6px">
+        <button onclick="changeFontSize(-1)" style="background:none;border:none;cursor:pointer;font-size:16px;color:var(--muted);padding:2px 4px;font-weight:700" title="글자 작게">−</button>
+        <span id="font-size-display" style="font-size:11px;color:var(--muted);min-width:28px;text-align:center;font-weight:600">16px</span>
+        <button onclick="changeFontSize(1)" style="background:none;border:none;cursor:pointer;font-size:16px;color:var(--muted);padding:2px 4px;font-weight:700" title="글자 크게">＋</button>
+      </div>
+      <button class="btn btn-outline btn-sm" id="sym-toggle-btn" onclick="toggleSymbolPalette()" style="font-size:13px">
+        ✦ 기호
+      </button>
+      <button class="btn btn-outline btn-sm" onclick="showChExportMenu('${ch.id}')" style="font-size:11px">📤 내보내기</button>
+      <button class="btn btn-outline btn-sm" onclick="deleteChapter('${ch.id}')" style="color:var(--rust);border-color:rgba(181,69,27,.25)">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        삭제
+      </button>
+      <div class="symbol-palette" id="symbol-palette" style="display:none;flex-wrap:wrap;"></div>
+    </div>
+    <div id="shortcut-bar" style="padding:6px 12px;background:var(--cream);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:4px;flex-wrap:wrap;flex-shrink:0;"></div>
+    <div style="display:flex;flex:1;overflow:hidden;">
+      <div class="editor-content" style="flex:1;overflow-y:auto;">
+        <textarea id="prose-editor" placeholder="이야기를 시작하세요..."
+          oninput="onEditorInput('${ch.id}',this.value)">${esc(ch.content||'')}</textarea>
+      </div>
+      <div id="split-panel" class="hidden">
+        <div class="split-panel-tabs" id="split-tabs" style="overflow-x:auto;flex-wrap:nowrap">
+          <button class="split-tab active" onclick="switchSplitTab('overview')">📋 개요</button>
+          <button class="split-tab" onclick="switchSplitTab('characters')">👤 인물</button>
+          <button class="split-tab" onclick="switchSplitTab('plot')">📐 플롯</button>
+          <button class="split-tab" onclick="switchSplitTab('world')">🌍 세계관</button>
+          <button class="split-tab" onclick="switchSplitTab('diagram')">🔗 다이어그램</button>
+          <button class="split-tab" onclick="switchSplitTab('memo')">📝 메모</button>
+        </div>
+        <div class="split-panel-content" id="split-content"></div>
+      </div>
+    </div>`;
+}
+
+function onEditorInput(id, val) {
+  const p = getProject();
+  const ch = p.chapters.find(c => c.id === id);
+  if (!ch) return;
+  ch.content = val;
+  const wc = document.getElementById('wc-display');
+  if (wc) wc.textContent = val.length.toLocaleString() + '자';
+  // debounce save
+  clearTimeout(window._saveTimer);
+  window._saveTimer = setTimeout(() => { autoSave(); updateChapterListItem(ch); }, 800);
+}
+
+function updateChapterListItem(ch) {
+  // refresh chapter list meta without full re-render
+  const items = document.querySelectorAll('.chapter-item');
+  items.forEach(el => {
+    if (el.querySelector('.chapter-item-title')?.textContent === ch.title) {
+      const meta = el.querySelector('.chapter-item-meta span');
+      if (meta) meta.textContent = (ch.content||'').length.toLocaleString() + '자';
+    }
+  });
+}
+
+function selectChapter(id) {
+  activeChapterId = id;
+  renderChapters();
+  // On mobile, scroll to editor
+  if (window.innerWidth <= 768) {
+    setTimeout(() => {
+      const ea = document.getElementById('editor-area');
+      if (ea) ea.scrollIntoView({behavior:'smooth'});
+    }, 100);
+  }
+}
+
+function newChapter() {
+  const p = getProject();
+  const ch = { id: uid(), title: `${(p.chapters||[]).length+1}화`, content: '', status: '초안', createdAt: new Date().toISOString() };
+  if (!p.chapters) p.chapters = [];
+  p.chapters.push(ch);
+  activeChapterId = ch.id;
+  autoSave(); renderChapters();
+}
+
+function updateChapter(id, key, val) {
+  const p = getProject();
+  const ch = p.chapters.find(c => c.id === id);
+  if (!ch) return;
+  ch[key] = val;
+  autoSave();
+}
+
+function deleteChapter(id) {
+  confirmDialog('이 화를 삭제합니다.', () => {
+  const p = getProject();
+  p.chapters = p.chapters.filter(c => c.id !== id);
+  if (activeChapterId === id) activeChapterId = p.chapters[0]?.id || null;
+  autoSave(); renderChapters();
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SCHEDULE
+// ═══════════════════════════════════════════════════════════════
+function renderSchedule() {
+  const p = getProject();
+  const chapters = p.chapters || [];
+  const done = chapters.filter(c => c.status === '완료').length;
+  const progress = chapters.length ? Math.round((done/chapters.length)*100) : 0;
+  const totalWords = chapters.reduce((a,c) => a+(c.content||'').length, 0);
+
+  const chRows = chapters.map((c,i) => `
+    <div style="display:flex;align-items:center;gap:12px;padding:8px 12px;border-radius:8px;background:var(--cream);margin-bottom:6px">
+      <span class="font-display" style="color:var(--gold);font-size:13px;min-width:32px">#${i+1}</span>
+      <span style="flex:1;font-weight:500;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.title)}</span>
+      <span style="font-size:12px;color:var(--muted)">${(c.content||'').length.toLocaleString()}자</span>
+      <span class="status-badge s-${esc(c.status||'초안')}">${esc(c.status||'초안')}</span>
+    </div>`).join('');
+
+  document.getElementById('main').innerHTML = `
+    <div style="max-width:780px;margin:0 auto">
+      <div class="font-display" style="font-size:22px;margin-bottom:22px">연재 관리</div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="sec-title">집필 진행률</div>
+        <div style="display:flex;align-items:center;gap:16px;margin-bottom:16px">
+          <div class="progress-bar" style="flex:1"><div class="progress-fill" style="width:${progress}%"></div></div>
+          <span style="font-weight:700;font-size:15px;min-width:44px">${progress}%</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
+          ${[
+            {l:'전체',v:chapters.length+'화',c:'var(--ink)'},
+            {l:'완료',v:done+'화',c:'var(--teal)'},
+            {l:'미완성',v:(chapters.length-done)+'화',c:'var(--gold)'},
+            {l:'총 분량',v:totalWords.toLocaleString()+'자',c:'var(--rust)'},
+          ].map(s=>`<div style="text-align:center;padding:12px 6px;background:var(--cream);border-radius:8px">
+            <div class="font-display" style="font-size:16px;color:${s.c}">${s.v}</div>
+            <div style="font-size:11px;color:var(--muted);margin-top:2px">${s.l}</div>
+          </div>`).join('')}
+        </div>
+      </div>
+
+      <div class="card" style="margin-bottom:16px">
+        <div class="sec-title">연재 설정</div>
+        <div class="form-grid">
+          <div><label class="label">플랫폼</label>
+            <select onchange="updateProject('platform',this.value)"><option value="">선택</option>${selOpts(PLATFORMS,p.platform||'')}</select>
+          </div>
+          <div><label class="label">업로드 주기</label>
+            <select onchange="updateProject('uploadCycle',this.value)"><option value="">선택</option>${selOpts(['매일','주 2회','주 3회','주말','비정기'],p.uploadCycle||'')}</select>
+          </div>
+          <div><label class="label">목표 화수</label>
+            <input type="number" value="${esc(p.targetChapters||'')}" oninput="updateProject('targetChapters',this.value)" placeholder="예: 100">
+          </div>
+          <div><label class="label">연재 시작일</label>
+            <input type="date" value="${esc(p.startDate||'')}" onchange="updateProject('startDate',this.value)">
+          </div>
+        </div>
+      </div>
+
+      ${chapters.length > 0 ? `
+      <div class="card">
+        <div class="sec-title">화 목록 현황</div>
+        ${chRows}
+      </div>` : ''}
+    </div>`;
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// DIAGRAM ENGINE
+// ═══════════════════════════════════════════════════════════════
+const DG_COLORS = [
+  {v:'#f0e9d8', label:'기본',   border:'#c4922a'},
+  {v:'#e53935', label:'빨강',   border:'#b71c1c'},
+  {v:'#e64a19', label:'주황',   border:'#bf360c'},
+  {v:'#f9a825', label:'노랑',   border:'#f57f17'},
+  {v:'#43a047', label:'초록',   border:'#1b5e20'},
+  {v:'#00897b', label:'청록',   border:'#004d40'},
+  {v:'#1e88e5', label:'파랑',   border:'#0d47a1'},
+  {v:'#5e35b1', label:'남보라', border:'#311b92'},
+  {v:'#8e24aa', label:'보라',   border:'#4a148c'},
+  {v:'#d81b60', label:'핑크',   border:'#880e4f'},
+  {v:'#546e7a', label:'회색',   border:'#263238'},
+  {v:'#263238', label:'다크',   border:'#000000'},
+];
+
+const DG_TYPE_COLORS = {
+  character: {bg:'#fff3e0', border:'#e8bc5c', text:'#7a4a00'},
+  place:     {bg:'#e8f5e9', border:'#4caf50', text:'#1b5e20'},
+  event:     {bg:'#e8eaf6', border:'#7986cb', text:'#283593'},
+  idea:      {bg:'#fce4ec', border:'#f48fb1', text:'#880e4f'},
+  world:     {bg:'#e0f7fa', border:'#4dd0e1', text:'#006064'},
+  memo:      {bg:'#fffde7', border:'#ffee58', text:'#827717'},
+};
+
+const DG_TYPES = [
+  {id:'character', label:'인물', icon:'👤', desc:'등장인물'},
+  {id:'place',     label:'장소', icon:'📍', desc:'지역/장소'},
+  {id:'event',     label:'사건', icon:'⚡', desc:'사건/사고'},
+  {id:'idea',      label:'아이디어', icon:'💡', desc:'아이디어'},
+  {id:'world',     label:'세계관', icon:'🌍', desc:'세계관 요소'},
+  {id:'memo',      label:'메모', icon:'📝', desc:'자유 메모'},
+];
+
+const DG_DIAGRAM_TYPES = [
+  {id:'relation',  label:'인물 관계도'},
+  {id:'plot',      label:'플롯 흐름도'},
+  {id:'world',     label:'세계관 맵'},
+  {id:'free',      label:'자유 메모'},
+];
+
+let dgState = {
+  activeDiagramId: null,
+  selectedNodeId: null,
+  selectedEdgeIdx: null,
+  connecting: false,
+  connectFrom: null,
+  pan: {x:0, y:0},
+  zoom: 1,
+  dragging: null,
+  dragOffset: {x:0, y:0},  // 논리 좌표 기준 offset
+};
+
+// 화면 좌표 → 논리 좌표
+function screenToLogic(sx, sy) {
+  const wrap = document.getElementById('dg-wrap');
+  const wr   = wrap ? wrap.getBoundingClientRect() : {left:0, top:0};
+  return {
+    x: (sx - wr.left - dgState.pan.x) / dgState.zoom,
+    y: (sy - wr.top  - dgState.pan.y) / dgState.zoom,
+  };
+}
+
+// 논리 좌표 → 화면 좌표 (wrap 기준)
+function logicToScreen(lx, ly) {
+  return {
+    x: lx * dgState.zoom + dgState.pan.x,
+    y: ly * dgState.zoom + dgState.pan.y,
+  };
+}
+
+// stage 트랜스폼 적용
+function applyStage() {
+  const stage = document.getElementById('dg-stage');
+  if (!stage) return;
+  stage.style.transformOrigin = '0 0';
+  stage.style.transform = `translate(${dgState.pan.x}px,${dgState.pan.y}px) scale(${dgState.zoom})`;
+  const zl = document.getElementById('zoom-label');
+  if (zl) zl.textContent = Math.round(dgState.zoom*100)+'%';
+}
+
+function getDiagrams() { return getProject().diagrams || []; }
+function getActiveDiagram() { return getDiagrams().find(d => d.id === dgState.activeDiagramId); }
+
+function saveDiagram() {
+  const p = getProject();
+  if (!p.diagrams) p.diagrams = [];
+  autoSave();
+}
+
+// ── 다이어그램 탭 렌더 ──
+function renderDiagram() {
+  const p = getProject();
+  if (!p.diagrams) p.diagrams = [];
+  const diagrams = p.diagrams;
+
+  // 활성 다이어그램이 없으면 첫 번째로
+  if (!dgState.activeDiagramId && diagrams.length > 0) {
+    dgState.activeDiagramId = diagrams[0].id;
+    dgState.pan = {x:0, y:0};
+    dgState.zoom = 1;
+  }
+
+  const tabsHtml = diagrams.map(d => `
+    <button class="diagram-tab ${d.id===dgState.activeDiagramId?'active':''}"
+      onclick="switchDiagram('${d.id}')">${esc(d.name)}</button>`).join('');
+
+  document.getElementById('main').innerHTML = `
+    <div class="diagram-wrap">
+      <div class="diagram-toolbar">
+        <div class="diagram-tabs">${tabsHtml}</div>
+        <button class="btn btn-gold btn-sm" onclick="showNewDiagramModal()">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          새 다이어그램
+        </button>
+        ${diagrams.length>0?`
+        <div style="width:1px;height:20px;background:var(--border)"></div>
+        <button class="btn btn-outline btn-sm" onclick="showAddNodeModal()">＋ 노드 추가</button>
+        <button class="btn btn-outline btn-sm" onclick="toggleConnectMode()" id="btn-connect">🔗 연결</button>
+        <button class="btn btn-outline btn-sm" onclick="resetView()">⊕ 화면 맞춤</button>
+        <span id="zoom-label" style="font-size:11px;color:var(--muted);min-width:36px;text-align:center">100%</span>
+        <button class="btn btn-outline btn-sm" onclick="clearSelection()">✕ 선택 해제</button>
+        <div style="flex:1"></div>
+        <button class="btn btn-danger btn-sm" onclick="deleteActiveDiagram()">다이어그램 삭제</button>
+        `:''}
+      </div>
+      <div class="diagram-canvas-wrap" id="dg-wrap" style="touch-action:none">
+        ${diagrams.length===0
+          ? `<div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--muted)">
+              <div style="font-size:40px">🗂️</div>
+              <div style="font-size:15px">다이어그램을 만들어보세요</div>
+              <button class="btn btn-gold" onclick="showNewDiagramModal()">＋ 새 다이어그램 만들기</button>
+            </div>`
+          : `<div id="dg-stage" style="position:absolute;inset:0;overflow:visible;">
+               <div id="diagram-canvas" style="position:absolute;inset:0;"></div>
+               <svg id="diagram-svg" style="position:absolute;left:0;top:0;width:4000px;height:4000px;pointer-events:none;overflow:visible"><defs></defs><g id="svg-edges"></g></svg>
+             </div>`}
+      </div>
+    </div>`;
+
+  if (diagrams.length > 0) {
+    dgState.pan = {x:0, y:0};
+    dgState.zoom = 1;
+    renderDiagramCanvas();
+    setupDiagramEvents();
+  }
+}
+
+function switchDiagram(id) {
+  dgState.activeDiagramId = id;
+  dgState.selectedNodeId = null;
+  dgState.connecting = false;
+  dgState.connectFrom = null;
+  dgState.pan = {x:0, y:0};
+  dgState.zoom = 1;
+  renderDiagram();
+}
+
+function renderDiagramCanvas() {
+  const dg = getActiveDiagram();
+  if (!dg) return;
+  const canvas = document.getElementById('diagram-canvas');
+  const svgEdges = document.getElementById('svg-edges');
+  if (!canvas || !svgEdges) return;
+
+  // 노드 렌더
+  canvas.innerHTML = '';
+  (dg.nodes||[]).forEach(node => {
+    const el = document.createElement('div');
+    el.className = `dg-node type-${node.type}${node.id===dgState.selectedNodeId?' selected':''}`;
+    el.id = 'node-'+node.id;
+    el.style.left = node.x + 'px';
+    el.style.top  = node.y + 'px';
+    el.dataset.id = node.id;
+    const typeInfo = DG_TYPES.find(t=>t.id===node.type)||DG_TYPES[0];
+    // 커스텀 색상 적용
+    if (node.color && node.color !== '#f0e9d8') {
+      const darkColors = ['#e53935','#e64a19','#43a047','#00897b','#1e88e5','#5e35b1','#8e24aa','#d81b60','#546e7a','#263238'];
+      const isDark = darkColors.includes(node.color);
+      el.style.background  = node.color;
+      el.style.borderColor = isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.15)';
+      el.style.color       = isDark ? '#ffffff' : '#1a1208';
+    }
+    el.innerHTML = `
+      <div class="dg-node-icon">${typeInfo.icon}</div>
+      <div class="dg-node-label">${esc(node.label)}</div>
+      ${node.sub?`<div class="dg-node-sub">${esc(node.sub)}</div>`:''}
+    `;
+    canvas.appendChild(el);
+  });
+
+  // ── 엣지(연결선) 렌더 ────────────────────────────────────────
+  const EDGE_COLORS = ['#235f62','#c4922a','#b5451b','#3949ab','#7b1fa2','#555555'];
+
+  // defs 초기화
+  let defsHtml = '<defs>';
+  EDGE_COLORS.forEach(c => {
+    const id = c.replace('#','');
+    defsHtml += `<marker id="ae-${id}" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="${c}"/></marker>`;
+    defsHtml += `<marker id="as-${id}" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto-start-reverse"><polygon points="0 0,10 3.5,0 7" fill="${c}"/></marker>`;
+  });
+  defsHtml += '</defs>';
+  svgEdges.innerHTML = defsHtml;
+
+  // 노드 DOM 크기를 실제로 읽어서 가장자리 계산
+  function calcEdgePt(node, toX, toY, arrowOff) {
+    const el = document.getElementById('node-' + node.id);
+    const hw = el ? el.offsetWidth  / 2 : 90;
+    const hh = el ? el.offsetHeight / 2 : 38;
+    const cx = node.x + hw;
+    const cy = node.y + hh;
+    const dx = toX - cx, dy = toY - cy;
+    if (!dx && !dy) return {x: cx, y: cy};
+    const sx = dx ? hw / Math.abs(dx) : 1e9;
+    const sy = dy ? hh / Math.abs(dy) : 1e9;
+    const s  = Math.min(sx, sy);
+    const ex = cx + dx * s, ey = cy + dy * s;
+    if (arrowOff > 0) {
+      const len = Math.sqrt(dx*dx + dy*dy) || 1;
+      return {x: ex - (dx/len)*arrowOff, y: ey - (dy/len)*arrowOff};
+    }
+    return {x: ex, y: ey};
+  }
+
+  (dg.edges||[]).forEach((edge, ei) => {
+    const fromNode = (dg.nodes||[]).find(n => n.id === edge.from);
+    const toNode   = (dg.nodes||[]).find(n => n.id === edge.to);
+    if (!fromNode || !toNode) return;
+
+    const color = edge.color  || '#235f62';
+    const dir   = edge.dir   || 'forward';
+    const style = edge.style || 'solid';
+    const cid   = color.replace('#','');
+
+    // 두 노드 중심 (실제 DOM 크기 기준)
+    const fel = document.getElementById('node-' + fromNode.id);
+    const tel = document.getElementById('node-' + toNode.id);
+    const fhw = fel ? fel.offsetWidth/2  : 90, fhh = fel ? fel.offsetHeight/2 : 38;
+    const thw = tel ? tel.offsetWidth/2  : 90, thh = tel ? tel.offsetHeight/2 : 38;
+    const fcx = fromNode.x + fhw;
+    const fcy = fromNode.y + fhh;
+    const tcx = toNode.x   + thw;
+    const tcy = toNode.y   + thh;
+
+    const hasEnd   = (dir === 'forward' || dir === 'both');
+    const hasStart = (dir === 'both');
+
+    const fp = calcEdgePt(fromNode, tcx, tcy, hasStart ? 13 : 0);
+    const tp = calcEdgePt(toNode,   fcx, fcy, hasEnd   ? 13 : 0);
+    const fx = fp.x, fy = fp.y, tx = tp.x, ty = tp.y;
+    const mx = (fx + tx) / 2, my = (fy + ty) / 2;
+
+    const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+    g.dataset.edgeIdx = ei;
+    const isSelected = (dgState.selectedEdgeIdx === ei);
+
+    if (style === 'cut') {
+      // 절단선: 두 반쪽 + X 기호
+      const q1x = (fx*2+tx)/3, q1y = (fy*2+ty)/3;
+      const q2x = (fx+tx*2)/3, q2y = (fy+ty*2)/3;
+      [[fx,fy,q1x,q1y,hasStart,false],[q2x,q2y,tx,ty,false,hasEnd]].forEach(([x1,y1,x2,y2,ms,me]) => {
+        const seg = document.createElementNS('http://www.w3.org/2000/svg','line');
+        seg.setAttribute('x1',x1); seg.setAttribute('y1',y1);
+        seg.setAttribute('x2',x2); seg.setAttribute('y2',y2);
+        seg.setAttribute('stroke',color); seg.setAttribute('stroke-width','2.5');
+        seg.setAttribute('stroke-linecap','round');
+        if (me) seg.setAttribute('marker-end',  `url(#ae-${cid})`);
+        if (ms) seg.setAttribute('marker-start',`url(#as-${cid})`);
+        g.appendChild(seg);
+      });
+      // X 기호
+      const xs = 7;
+      [[-xs,-xs,xs,xs],[xs,-xs,-xs,xs]].forEach(([dx1,dy1,dx2,dy2]) => {
+        const xl = document.createElementNS('http://www.w3.org/2000/svg','line');
+        xl.setAttribute('x1',mx+dx1); xl.setAttribute('y1',my+dy1);
+        xl.setAttribute('x2',mx+dx2); xl.setAttribute('y2',my+dy2);
+        xl.setAttribute('stroke',color); xl.setAttribute('stroke-width','2.5');
+        xl.setAttribute('stroke-linecap','round');
+        g.appendChild(xl);
+      });
+    } else {
+      const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('x1',fx); line.setAttribute('y1',fy);
+      line.setAttribute('x2',tx); line.setAttribute('y2',ty);
+      line.setAttribute('stroke',color); line.setAttribute('stroke-width','2.5');
+      line.setAttribute('stroke-linecap','round');
+      if (style === 'dashed') line.setAttribute('stroke-dasharray','8,5');
+      if (hasEnd)   line.setAttribute('marker-end',  `url(#ae-${cid})`);
+      if (hasStart) line.setAttribute('marker-start',`url(#as-${cid})`);
+      g.appendChild(line);
+    }
+
+    // 선택 하이라이트 (선택됐을 때만 표시)
+    if (isSelected) {
+      const glow = document.createElementNS('http://www.w3.org/2000/svg','line');
+      glow.setAttribute('x1',fx); glow.setAttribute('y1',fy);
+      glow.setAttribute('x2',tx); glow.setAttribute('y2',ty);
+      glow.setAttribute('stroke', color);
+      glow.setAttribute('stroke-width','10');
+      glow.setAttribute('stroke-opacity','0.25');
+      glow.setAttribute('stroke-linecap','round');
+      g.insertBefore(glow, g.firstChild);
+    }
+    // 넓은 터치 히트 영역
+    const hit = document.createElementNS('http://www.w3.org/2000/svg','line');
+    hit.setAttribute('x1',fx); hit.setAttribute('y1',fy);
+    hit.setAttribute('x2',tx); hit.setAttribute('y2',ty);
+    hit.setAttribute('stroke','transparent'); hit.setAttribute('stroke-width','28');
+    g.insertBefore(hit, g.firstChild);
+
+    // 라벨 (정중앙)
+    if (edge.label) {
+      const lw = Math.max(50, edge.label.length * 10 + 20);
+      const bg = document.createElementNS('http://www.w3.org/2000/svg','rect');
+      bg.setAttribute('x', mx - lw/2); bg.setAttribute('y', my - 12);
+      bg.setAttribute('width', lw);    bg.setAttribute('height', 22);
+      bg.setAttribute('rx', 11);       bg.setAttribute('fill','#fff');
+      bg.setAttribute('stroke', color); bg.setAttribute('stroke-width','1.5');
+      g.appendChild(bg);
+      const txt = document.createElementNS('http://www.w3.org/2000/svg','text');
+      txt.setAttribute('x', mx); txt.setAttribute('y', my + 5);
+      txt.setAttribute('text-anchor','middle'); txt.setAttribute('font-size','11');
+      txt.setAttribute('fill', color); txt.setAttribute('font-weight','700');
+      txt.setAttribute('font-family','Noto Sans KR,sans-serif');
+      txt.textContent = edge.label;
+      g.appendChild(txt);
+    }
+
+    svgEdges.appendChild(g);
+  });
+
+}
+
+function setupDiagramEvents() {
+  const canvas = document.getElementById('diagram-canvas');
+  const svgEl  = document.getElementById('diagram-svg');
+  if (!canvas) return;
+
+  // ── 공통 좌표 추출 ──────────────────────────────────────────
+  function xy(e) {
+    const t = e.touches?.[0] ?? e.changedTouches?.[0] ?? e;
+    return { x: t.clientX, y: t.clientY };
+  }
+
+  // ── 상태 ────────────────────────────────────────────────────
+  let drag       = null;   // { id, offX, offY }
+  let longTimer  = null;
+  let moved      = false;
+  let tapTimer   = null;
+  let tapId      = null;
+
+  // ── 노드 터치 시작 ───────────────────────────────────────────
+  function nodeStart(e, nodeEl) {
+    const id = nodeEl.dataset.id;
+    const {x, y} = xy(e);
+
+    // 첫 탭 → 선택, 선택된 노드 재탭 → 편집
+    if (dgState.selectedNodeId === id) {
+      // 이미 선택된 노드를 탭 → 편집 모달 열기 (짧게 탭했을 때만)
+      tapId = id;
+    } else {
+      tapId = null;
+    }
+
+    // 드래그 offset 계산을 위해 node 미리 찾기
+    const dg0   = getActiveDiagram();
+    const node0 = (dg0?.nodes||[]).find(n => n.id === id);
+
+    // 연결 모드 → 탭만으로 처리
+    if (dgState.connecting) {
+      if (!dgState.connectFrom) {
+        dgState.connectFrom = id;
+        nodeEl.style.outline = '3px solid var(--rust)';
+        toast('연결할 두 번째 노드를 탭하세요');
+      } else if (dgState.connectFrom !== id) {
+        showConnectLabelModal(dgState.connectFrom, id);
+        dgState.connectFrom = null;
+        toggleConnectMode(false);
+      }
+      e.preventDefault(); return;
+    }
+
+    moved = false;
+    dgState.selectedNodeId = id;
+
+    // 롱프레스 (800ms) → 컨텍스트 메뉴
+    longTimer = setTimeout(() => {
+      if (!moved) {
+        drag = null;
+        showNodeContextMenu(id, x, y);  // x,y는 화면좌표 (메뉴 위치용)
+      }
+    }, 800);
+
+    // 드래그 준비
+    const lpos = screenToLogic(x, y);
+    // node0.x/y는 이미 논리좌표 → offset도 논리좌표 기준
+    drag = { id, offX: lpos.x - (node0?.x ?? lpos.x), offY: lpos.y - (node0?.y ?? lpos.y) };
+    nodeEl.style.zIndex = 100;
+    e.preventDefault();
+  }
+
+  // ── 노드 이동 ────────────────────────────────────────────────
+  function nodeMove(e) {
+    if (!drag) return;
+    const {x, y} = xy(e);
+    moved = true;
+    clearTimeout(longTimer);
+    const dgEnd  = getActiveDiagram();
+    const nodeEnd2 = (dgEnd?.nodes||[]).find(n => n.id === drag.id);
+    if (!nodeEnd2) return;
+    const wrap = document.getElementById('dg-wrap');
+    const lpos  = screenToLogic(x, y);
+    const dg1   = getActiveDiagram();
+    const nodeMv = (dg1?.nodes||[]).find(n => n.id === drag.id);
+    if (!nodeMv) return;
+    nodeMv.x = lpos.x - drag.offX;
+    nodeMv.y = lpos.y - drag.offY;
+    const el = document.getElementById('node-' + drag.id);
+    if (el) {
+      el.style.left = nodeMv.x + 'px';
+      el.style.top  = nodeMv.y + 'px';
+    }
+    // 엣지만 빠르게 다시 그리기
+    renderEdgesOnly();
+    e.preventDefault();
+  }
+
+  // ── 노드 터치 끝 ─────────────────────────────────────────────
+  function nodeEnd(e) {
+    clearTimeout(longTimer);
+    if (drag) {
+      if (!moved) {
+        // 짧은 탭
+        if (tapId === drag.id) {
+          // 이미 선택된 상태에서 탭 → 편집
+          showEditNodeModal(drag.id);
+        } else {
+          // 첫 탭 → 선택
+          dgState.selectedNodeId = drag.id;
+          renderDiagramCanvas();
+        }
+        tapId = null;
+      } else if (moved) {
+        saveDiagram();
+      }
+      const el = document.getElementById('node-' + drag.id);
+      if (el) { el.style.boxShadow = ''; el.style.zIndex = ''; }
+      drag = null;
+    }
+  }
+
+  // ── 캔버스 이벤트 등록 ───────────────────────────────────────
+  canvas.addEventListener('touchstart', e => {
+    const nodeEl = e.target.closest('.dg-node');
+    if (nodeEl) nodeStart(e, nodeEl);
+    else { dgState.selectedNodeId = null; renderDiagramCanvas(); }
+  }, {passive: false});
+
+  canvas.addEventListener('touchmove',  nodeMove, {passive: false});
+  canvas.addEventListener('touchend',   nodeEnd,  {passive: false});
+
+  // 마우스 (PC)
+  canvas.addEventListener('mousedown', e => {
+    const nodeEl = e.target.closest('.dg-node');
+    if (nodeEl) nodeStart(e, nodeEl);
+  });
+  window.addEventListener('mousemove', e => { if (drag) nodeMove(e); });
+  window.addEventListener('mouseup',   e => { if (drag) nodeEnd(e); });
+
+  // PC 우클릭
+  canvas.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    const nodeEl = e.target.closest('.dg-node');
+    if (nodeEl) showNodeContextMenu(nodeEl.dataset.id, e.clientX, e.clientY);
+  });
+
+  // ── 핀치 줌 + 두 손가락 패닝 ────────────────────────────────
+  const wrapEl = document.getElementById('dg-wrap');
+  if (wrapEl) {
+    let lastDist  = null;
+    let lastMidX  = null, lastMidY  = null;
+    let isPinching = false;
+
+    function getTouchDist(e) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      return Math.sqrt(dx*dx + dy*dy);
+    }
+    function getTouchMid(e) {
+      return {
+        x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+        y: (e.touches[0].clientY + e.touches[1].clientY) / 2,
+      };
+    }
+
+    wrapEl.addEventListener('touchstart', e => {
+      if (e.touches.length === 2) {
+        isPinching = true;
+        drag = null; // 드래그 취소
+        lastDist = getTouchDist(e);
+        const mid = getTouchMid(e);
+        lastMidX = mid.x; lastMidY = mid.y;
+        e.preventDefault();
+      }
+    }, {passive: false});
+
+    wrapEl.addEventListener('touchmove', e => {
+      if (e.touches.length === 2 && isPinching) {
+        e.preventDefault();
+        const dist = getTouchDist(e);
+        const mid  = getTouchMid(e);
+        const wr   = wrapEl.getBoundingClientRect();
+
+        const wr2 = wrapEl.getBoundingClientRect();
+        // 줌: 중점 고정
+        if (lastDist && lastDist > 0) {
+          const ratio   = dist / lastDist;
+          const newZoom = Math.max(0.3, Math.min(3, dgState.zoom * ratio));
+          const mx = mid.x - wr2.left;
+          const my = mid.y - wr2.top;
+          dgState.pan.x = mx - (mx - dgState.pan.x) * (newZoom / dgState.zoom);
+          dgState.pan.y = my - (my - dgState.pan.y) * (newZoom / dgState.zoom);
+          dgState.zoom  = newZoom;
+        }
+        // 패닝
+        if (lastMidX !== null) {
+          dgState.pan.x += mid.x - lastMidX;
+          dgState.pan.y += mid.y - lastMidY;
+        }
+        lastDist = dist; lastMidX = mid.x; lastMidY = mid.y;
+        applyStage();
+      }
+    }, {passive: false});
+
+    wrapEl.addEventListener('touchend', e => {
+      if (e.touches.length < 2) {
+        isPinching = false;
+        lastDist = null; lastMidX = null; lastMidY = null;
+      }
+    }, {passive: true});
+  }
+
+  // ── 연결선 터치 — wrap 전체에서 감지 (SVG pointer-events 우회) ──
+  const wrap = document.getElementById('dg-wrap');
+  if (wrap) {
+    let edgeTimer = null;
+    let edgeMoved = false;
+    let edgeTouchX = 0, edgeTouchY = 0;
+
+    wrap.addEventListener('touchstart', e => {
+      // 노드 위면 무시 (노드 이벤트가 처리)
+      if (e.target.closest('.dg-node')) return;
+      edgeMoved = false;
+      edgeTouchX = e.touches[0].clientX;
+      edgeTouchY = e.touches[0].clientY;
+
+      // 터치 좌표와 가장 가까운 엣지 찾기
+      const dg = getActiveDiagram();
+      if (!dg || !dg.edges || dg.edges.length === 0) return;
+      const wrapRect = wrap.getBoundingClientRect();
+      const tl = screenToLogic(edgeTouchX, edgeTouchY);
+      const tx = tl.x, ty = tl.y;
+
+      let closestIdx = -1;
+      let closestDist = 30; // 30px 이내만 감지
+      (dg.edges||[]).forEach((edge, ei) => {
+        const from = (dg.nodes||[]).find(n=>n.id===edge.from);
+        const to   = (dg.nodes||[]).find(n=>n.id===edge.to);
+        if (!from||!to) return;
+        const fx = from.x+dgState.pan.x+90, fy = from.y+dgState.pan.y+38;
+        const ex = to.x+dgState.pan.x+90,   ey = to.y+dgState.pan.y+38;
+        // 점-선분 거리 계산
+        const dx = ex-fx, dy = ey-fy;
+        const lenSq = dx*dx + dy*dy;
+        let t = lenSq > 0 ? ((tx-fx)*dx + (ty-fy)*dy) / lenSq : 0;
+        t = Math.max(0, Math.min(1, t));
+        const px = fx + t*dx - tx, py = fy + t*dy - ty;
+        const dist = Math.sqrt(px*px + py*py);
+        if (dist < closestDist) { closestDist = dist; closestIdx = ei; }
+      });
+
+      if (closestIdx < 0) return;
+
+      edgeTimer = setTimeout(() => {
+        if (!edgeMoved) {
+          navigator.vibrate?.(50);
+          // 선택 표시 먼저
+          dgState.selectedEdgeIdx = closestIdx;
+          renderDiagramCanvas();
+          showEditEdgeModal(closestIdx);
+        }
+      }, 800);
+    }, {passive: true});
+
+    wrap.addEventListener('touchmove', e => {
+      const dx = e.touches[0].clientX - edgeTouchX;
+      const dy = e.touches[0].clientY - edgeTouchY;
+      if (Math.sqrt(dx*dx+dy*dy) > 8) { edgeMoved = true; clearTimeout(edgeTimer); }
+    }, {passive: true});
+
+    wrap.addEventListener('touchend',    () => clearTimeout(edgeTimer), {passive: true});
+    wrap.addEventListener('touchcancel', () => clearTimeout(edgeTimer), {passive: true});
+
+    // PC 더블클릭으로 노드/선 편집
+    wrap.addEventListener('dblclick', e => {
+      // 노드 더블클릭 → 편집 모달
+      const nodeEl = e.target.closest('.dg-node');
+      if (nodeEl) {
+        const id = nodeEl.dataset.id;
+        if (id) { e.preventDefault(); showEditNodeModal(id); }
+        return;
+      }
+      const dg = getActiveDiagram();
+      if (!dg || !dg.edges || dg.edges.length === 0) return;
+      const wrapRect = wrap.getBoundingClientRect();
+      const tl2 = screenToLogic(e.clientX, e.clientY);
+      const tx = tl2.x, ty = tl2.y;
+      let closestIdx = -1, closestDist = 20;
+      (dg.edges||[]).forEach((edge, ei) => {
+        const from = (dg.nodes||[]).find(n=>n.id===edge.from);
+        const to   = (dg.nodes||[]).find(n=>n.id===edge.to);
+        if (!from||!to) return;
+        const fx=from.x+dgState.pan.x+90, fy=from.y+dgState.pan.y+38;
+        const ex=to.x+dgState.pan.x+90,   ey=to.y+dgState.pan.y+38;
+        const dx=ex-fx, dy=ey-fy, lenSq=dx*dx+dy*dy;
+        let t = lenSq>0 ? ((tx-fx)*dx+(ty-fy)*dy)/lenSq : 0;
+        t = Math.max(0,Math.min(1,t));
+        const px=fx+t*dx-tx, py=fy+t*dy-ty;
+        const dist=Math.sqrt(px*px+py*py);
+        if (dist<closestDist) { closestDist=dist; closestIdx=ei; }
+      });
+      if (closestIdx >= 0) showEditEdgeModal(closestIdx);
+    });
+  }
+}
+
+function renderEdgesOnly() {
+  const dg = getActiveDiagram();
+  if (!dg) return;
+  const svgEdges = document.getElementById('svg-edges');
+  if (!svgEdges) return;
+
+  const COLORS = ['#235f62','#c4922a','#b5451b','#3949ab','#7b1fa2','#555555'];
+  let defs = '<defs>';
+  COLORS.forEach(c => {
+    const id = c.replace('#','');
+    defs += `<marker id="ae-${id}" markerWidth="10" markerHeight="7" refX="10" refY="3.5" orient="auto"><polygon points="0 0,10 3.5,0 7" fill="${c}"/></marker>`;
+    defs += `<marker id="as-${id}" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto-start-reverse"><polygon points="0 0,10 3.5,0 7" fill="${c}"/></marker>`;
+  });
+  defs += '</defs>';
+  svgEdges.innerHTML = defs;
+
+  function ep(node, toX, toY, off) {
+    const el=document.getElementById('node-'+node.id);
+    const hw=el?el.offsetWidth/2:90, hh=el?el.offsetHeight/2:38;
+    const cx=node.x+hw, cy=node.y+hh;
+    const dx=toX-cx, dy=toY-cy;
+    if(!dx&&!dy) return{x:cx,y:cy};
+    const s=Math.min(dx?90/Math.abs(dx):1e9, dy?38/Math.abs(dy):1e9);
+    const ex=cx+dx*s, ey=cy+dy*s;
+    if(off>0){const l=Math.sqrt(dx*dx+dy*dy)||1;return{x:ex-dx/l*off,y:ey-dy/l*off};}
+    return{x:ex,y:ey};
+  }
+
+  (dg.edges||[]).forEach(edge => {
+    const fn = (dg.nodes||[]).find(n=>n.id===edge.from);
+    const tn = (dg.nodes||[]).find(n=>n.id===edge.to);
+    if(!fn||!tn) return;
+    const color=edge.color||'#235f62', dir=edge.dir||'forward', cid=color.replace('#','');
+    const fe=document.getElementById('node-'+fn.id), te=document.getElementById('node-'+tn.id);
+    const fcx=fn.x+(fe?fe.offsetWidth/2:90), fcy=fn.y+(fe?fe.offsetHeight/2:38);
+    const tcx=tn.x+(te?te.offsetWidth/2:90), tcy=tn.y+(te?te.offsetHeight/2:38);
+    const he=dir==='forward'||dir==='both', hs=dir==='both';
+    const fp=ep(fn,tcx,tcy,hs?13:0), tp=ep(tn,fcx,fcy,he?13:0);
+    const line=document.createElementNS('http://www.w3.org/2000/svg','line');
+    line.setAttribute('x1',fp.x); line.setAttribute('y1',fp.y);
+    line.setAttribute('x2',tp.x); line.setAttribute('y2',tp.y);
+    line.setAttribute('stroke',color); line.setAttribute('stroke-width','2.5');
+    if(edge.style==='dashed') line.setAttribute('stroke-dasharray','8,5');
+    if(he) line.setAttribute('marker-end',`url(#ae-${cid})`);
+    if(hs) line.setAttribute('marker-start',`url(#as-${cid})`);
+    svgEdges.appendChild(line);
+  });
+}
+
+
+
+function resetView() {
+  dgState.pan={x:0,y:0};
+  dgState.zoom=1;
+  renderDiagramCanvas();
+}
+function clearSelection() { dgState.selectedNodeId=null; renderDiagramCanvas(); }
+
+function toggleConnectMode(force) {
+  dgState.connecting = force !== undefined ? force : !dgState.connecting;
+  dgState.connectFrom = null;
+  const btn = document.getElementById('btn-connect');
+  if (btn) {
+    btn.style.background = dgState.connecting ? 'var(--teal)' : '';
+    btn.style.color = dgState.connecting ? '#fff' : '';
+    btn.style.borderColor = dgState.connecting ? 'var(--teal)' : '';
+  }
+  if (dgState.connecting) toast('연결할 첫 번째 노드를 탭하세요');
+}
+
+function deleteEdge(idx) {
+  const dg = getActiveDiagram();
+  if (!dg) return;
+  dg.edges.splice(idx,1);
+  saveDiagram(); renderDiagramCanvas();
+}
+
+function showEditEdgeModal(idx) {
+  dgState.selectedEdgeIdx = idx;
+  renderDiagramCanvas();
+  const dg = getActiveDiagram();
+  const edge = dg?.edges?.[idx];
+  if (!edge) return;
+  showModal(`
+    <div class="modal-title">연결선 편집</div>
+    <div style="margin-bottom:14px">
+      <label class="label">설명</label>
+      <input id="ee-label" value="${esc(edge.label||'')}" placeholder="예: 연인, 라이벌">
+    </div>
+    <div style="margin-bottom:14px">
+      <label class="label">화살표 방향</label>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px" id="ee-dir-group">
+        ${[{v:'forward',l:'단방향 →'},{v:'both',l:'양방향 ↔'},{v:'none',l:'방향 없음 ─'}].map(t=>{
+          const sel=(edge.dir||'forward')===t.v;
+          return `<button type="button" onclick="selectEdgeOpt('ee-dir-group',this,'${t.v}')"
+            data-val="${t.v}"
+            style="padding:10px 6px;border:2px solid ${sel?'var(--gold)':'var(--border)'};border-radius:8px;
+              cursor:pointer;font-size:12px;font-weight:700;font-family:'Noto Sans KR',sans-serif;
+              background:${sel?'var(--gold-light)':'transparent'};color:${sel?'var(--gold)':'var(--muted)'};
+              transition:all .15s;text-align:center">
+            ${t.l}
+          </button>`;}).join('')}
+      </div>
+    </div>
+    <div style="margin-bottom:14px">
+      <label class="label">선 스타일</label>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px" id="ee-style-group">
+        ${[{v:'solid',l:'실선 ─────'},{v:'dashed',l:'점선 ╌╌╌╌╌'},{v:'cut',l:'절단 ─ ✕ ─'}].map(t=>{
+          const sel=(edge.style||'solid')===t.v;
+          return `<button type="button" onclick="selectEdgeOpt('ee-style-group',this,'${t.v}')"
+            data-val="${t.v}"
+            style="padding:10px 6px;border:2px solid ${sel?'var(--gold)':'var(--border)'};border-radius:8px;
+              cursor:pointer;font-size:12px;font-weight:700;font-family:'Noto Sans KR',sans-serif;
+              background:${sel?'var(--gold-light)':'transparent'};color:${sel?'var(--gold)':'var(--muted)'};
+              transition:all .15s;text-align:center">
+            ${t.l}
+          </button>`;}).join('')}
+      </div>
+    </div>
+    <div style="margin-bottom:20px">
+      <label class="label">선 색상</label>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px">
+        ${[{v:'#235f62',l:'초록'},{v:'#c4922a',l:'금색'},{v:'#b5451b',l:'빨강'},{v:'#3949ab',l:'파랑'},{v:'#7b1fa2',l:'보라'},{v:'#555555',l:'회색'}].map(c=>`
+          <label style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10px;color:var(--muted)">
+            <input type="radio" name="ee-color" value="${c.v}" ${(edge.color||'#235f62')===c.v?'checked':''} style="display:none">
+            <div style="width:28px;height:28px;border-radius:50%;background:${c.v};border:3px solid ${(edge.color||'#235f62')===c.v?'var(--gold)':'transparent'};transition:border-color .15s"
+              onclick="document.querySelectorAll('[name=ee-color]').forEach(r=>r.parentNode.querySelector('div').style.borderColor='transparent');this.style.borderColor='var(--gold)'">
+            </div>
+            ${c.l}
+          </label>`).join('')}
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" onclick="deleteEdge(${idx});closeModal()">삭제</button>
+      <button class="btn btn-outline" onclick="closeModal()">취소</button>
+      <button class="btn btn-gold" onclick="saveEdge(${idx})">저장</button>
+    </div>`, false);
+}
+
+function saveEdge(idx) {
+  const dg = getActiveDiagram();
+  const edge = dg?.edges?.[idx];
+  if (!edge) return;
+  edge.label = document.getElementById('ee-label').value.trim();
+  edge.dir   = document.querySelector('#ee-dir-group button[data-selected]')?.dataset.val||'forward';
+  edge.style = document.querySelector('#ee-style-group button[data-selected]')?.dataset.val||'solid';
+  edge.color = document.querySelector('input[name="ee-color"]:checked')?.value||'#235f62';
+  saveDiagram(); closeModal(); renderDiagramCanvas();
+}
+
+function deleteNode(id) {
+  confirmDialog('이 노드를 삭제합니다.', () => {
+  const dg = getActiveDiagram();
+  if (!dg) return;
+  dg.nodes = (dg.nodes||[]).filter(n=>n.id!==id);
+  dg.edges = (dg.edges||[]).filter(e=>e.from!==id&&e.to!==id);
+  dgState.selectedNodeId=null;
+  saveDiagram(); renderDiagramCanvas();
+  });
+}
+
+// ── 모달들 ──
+function showNewDiagramModal() {
+  showModal(`
+    <div class="modal-title">새 다이어그램</div>
+    <div style="margin-bottom:12px"><label class="label">이름 *</label>
+      <input id="dg-name" placeholder="예: 주요 인물 관계도"></div>
+    <div style="margin-bottom:20px"><label class="label">종류</label>
+      <select id="dg-type">${DG_DIAGRAM_TYPES.map(t=>`<option value="${t.id}">${t.label}</option>`).join('')}</select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">취소</button>
+      <button class="btn btn-gold" onclick="createDiagram()">만들기</button>
+    </div>`);
+  setTimeout(()=>document.getElementById('dg-name')?.focus(),100);
+}
+
+function createDiagram() {
+  const name = document.getElementById('dg-name').value.trim();
+  if (!name) { toast('이름을 입력해주세요.'); return; }
+  const p = getProject();
+  if (!p.diagrams) p.diagrams = [];
+  const dg = { id:uid(), name, type:document.getElementById('dg-type').value, nodes:[], edges:[] };
+  p.diagrams.push(dg);
+  dgState.activeDiagramId = dg.id;
+  saveDiagram(); closeModal(); renderDiagram();
+}
+
+function deleteActiveDiagram() {
+  confirmDialog('이 다이어그램을 삭제합니다.', () => {
+    const p = getProject();
+    p.diagrams = (p.diagrams||[]).filter(d=>d.id!==dgState.activeDiagramId);
+    dgState.activeDiagramId = p.diagrams[0]?.id || null;
+    saveDiagram(); renderDiagram();
+  });
+}
+
+function showAddNodeModal() {
+  const dg = getActiveDiagram();
+  if (!dg) return;
+  showModal(`
+    <div class="modal-title">노드 추가</div>
+    <div style="margin-bottom:12px"><label class="label">이름 *</label>
+      <input id="nd-label" placeholder="노드 이름"></div>
+    <div style="margin-bottom:12px"><label class="label">종류</label>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px" id="nd-type-group">
+        ${DG_TYPES.map((t,i)=>`
+          <button type="button" onclick="selectEdgeOpt('nd-type-group',this,'${t.id}')"
+            data-val="${t.id}" ${i===0?'data-selected="1"':''}
+            style="padding:10px 6px;border:2px solid ${i===0?'var(--gold)':'var(--border)'};
+              border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;
+              font-family:'Noto Sans KR',sans-serif;text-align:center;
+              background:${i===0?'var(--gold-light)':'transparent'};
+              color:${i===0?'var(--gold)':'var(--muted)'};transition:all .15s">
+            ${t.icon} ${t.label}
+          </button>`).join('')}
+      </div>
+    </div>
+    <div style="margin-bottom:14px"><label class="label">부제 (선택)</label>
+      <input id="nd-sub" placeholder="예: 주인공, 악역, 왕국..."></div>
+    <div style="margin-bottom:20px">
+      <label class="label">노드 색상 (선택)</label>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px" id="nd-color-group">
+        ${DG_COLORS.map((c,i)=>`
+          <button type="button" onclick="selectEdgeOpt('nd-color-group',this,'${c.v}')"
+            data-val="${c.v}" ${i===0?'data-selected="1"':''}
+            title="${c.label}"
+            style="width:34px;height:34px;border-radius:50%;cursor:pointer;transition:all .18s;
+              background:${c.v};
+              border:3px solid ${i===0?'#c4922a':c.border};
+              box-shadow:0 2px 6px rgba(0,0,0,.18)">
+          </button>`).join('')}
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">취소</button>
+      <button class="btn btn-gold" onclick="addNode()">추가</button>
+    </div>`);
+  setTimeout(()=>document.getElementById('nd-label')?.focus(),100);
+}
+
+function addNode() {
+  const label = document.getElementById('nd-label').value.trim();
+  if (!label) { toast('이름을 입력해주세요.'); return; }
+  const type = document.querySelector('#nd-type-group button[data-selected]')?.dataset.val || 'idea';
+  const sub = document.getElementById('nd-sub').value.trim();
+  const dg = getActiveDiagram();
+  const wrap = document.getElementById('dg-wrap');
+  const cx = wrap ? wrap.offsetWidth/2 - dgState.pan.x - 90 : 200;
+  const cy = wrap ? wrap.offsetHeight/2 - dgState.pan.y - 30 : 150;
+  if (!dg.nodes) dg.nodes = [];
+  const color = document.querySelector('#nd-color-group button[data-selected]')?.dataset.val || '#f0e9d8';
+  dg.nodes.push({ id:uid(), label, type, sub, color, x:cx + (Math.random()-0.5)*80, y:cy + (Math.random()-0.5)*80 });
+  saveDiagram(); closeModal(); renderDiagramCanvas();
+  toast('노드가 추가됐어요!');
+}
+
+function showEditNodeModal(id) {
+  const dg = getActiveDiagram();
+  const node = (dg?.nodes||[]).find(n=>n.id===id);
+  if (!node) return;
+  showModal(`
+    <div class="modal-title">노드 편집</div>
+    <div style="margin-bottom:12px"><label class="label">이름 *</label>
+      <input id="nd-label" value="${esc(node.label)}" placeholder="노드 이름"></div>
+    <div style="margin-bottom:12px"><label class="label">종류</label>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px" id="nd-type-group">
+        ${DG_TYPES.map(t=>{
+          const sel = t.id===node.type;
+          return `<button type="button" onclick="selectEdgeOpt('nd-type-group',this,'${t.id}')"
+            data-val="${t.id}" ${sel?'data-selected="1"':''}
+            style="padding:10px 6px;border:2px solid ${sel?'var(--gold)':'var(--border)'};
+              border-radius:8px;cursor:pointer;font-size:12px;font-weight:700;
+              font-family:'Noto Sans KR',sans-serif;text-align:center;
+              background:${sel?'var(--gold-light)':'transparent'};
+              color:${sel?'var(--gold)':'var(--muted)'};transition:all .15s">
+            ${t.icon} ${t.label}
+          </button>`;}).join('')}
+      </div>
+    </div>
+    <div style="margin-bottom:14px"><label class="label">부제 (선택)</label>
+      <input id="nd-sub" value="${esc(node.sub||'')}" placeholder="예: 주인공, 악역..."></div>
+    <div style="margin-bottom:20px">
+      <label class="label">노드 색상</label>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:6px" id="nd-color-group">
+        ${DG_COLORS.map(c=>{
+          const sel=(node.color||'#f0e9d8')===c.v;
+          return `<button type="button" onclick="selectEdgeOpt('nd-color-group',this,'${c.v}')"
+            data-val="${c.v}" ${sel?'data-selected="1"':''}
+            title="${c.label}"
+            style="width:34px;height:34px;border-radius:50%;cursor:pointer;transition:all .18s;
+              background:${c.v};
+              border:3px solid ${sel?'#c4922a':c.border};
+              box-shadow:0 2px 6px rgba(0,0,0,.18)">
+          </button>`;}).join('')}
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" onclick="deleteNode('${id}');closeModal()">삭제</button>
+      <button class="btn btn-outline" onclick="closeModal()">취소</button>
+      <button class="btn btn-gold" onclick="editNode('${id}')">저장</button>
+    </div>`, false);
+}
+
+function editNode(id) {
+  const label = document.getElementById('nd-label').value.trim();
+  if (!label) { toast('이름을 입력해주세요.'); return; }
+  const dg = getActiveDiagram();
+  const node = (dg?.nodes||[]).find(n=>n.id===id);
+  if (!node) return;
+  node.label = label;
+  node.type  = document.querySelector('#nd-type-group button[data-selected]')?.dataset.val || node.type;
+  node.sub   = document.getElementById('nd-sub').value.trim();
+  node.color = document.querySelector('#nd-color-group button[data-selected]')?.dataset.val || node.color || 'default';
+  saveDiagram(); closeModal(); renderDiagramCanvas();
+}
+
+function showConnectLabelModal(fromId, toId) {
+  showModal(`
+    <div class="modal-title">연결선 설정</div>
+    <div style="margin-bottom:14px">
+      <label class="label">설명 (선택)</label>
+      <input id="edge-label" placeholder="예: 연인, 라이벌, 스승, 원인→결과">
+    </div>
+    <div style="margin-bottom:14px">
+      <label class="label">화살표 방향</label>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px" id="edge-dir-group">
+        ${[{v:'forward',l:'단방향 →'},{v:'both',l:'양방향 ↔'},{v:'none',l:'방향 없음 ─'}].map((t,i)=>`
+          <button type="button" onclick="selectEdgeOpt('edge-dir-group',this,'${t.v}')"
+            data-val="${t.v}"
+            style="padding:10px 6px;border:2px solid ${i===0?'var(--gold)':'var(--border)'};border-radius:8px;
+              cursor:pointer;font-size:12px;font-weight:700;font-family:'Noto Sans KR',sans-serif;
+              background:${i===0?'var(--gold-light)':'transparent'};color:${i===0?'var(--gold)':'var(--muted)'};
+              transition:all .15s;text-align:center">
+            ${t.l}
+          </button>`).join('')}
+      </div>
+    </div>
+    <div style="margin-bottom:14px">
+      <label class="label">선 스타일</label>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:4px" id="edge-style-group">
+        ${[{v:'solid',l:'실선 ─────'},{v:'dashed',l:'점선 ╌╌╌╌╌'},{v:'cut',l:'절단 ─ ✕ ─'}].map((t,i)=>`
+          <button type="button" onclick="selectEdgeOpt('edge-style-group',this,'${t.v}')"
+            data-val="${t.v}"
+            style="padding:10px 6px;border:2px solid ${i===0?'var(--gold)':'var(--border)'};border-radius:8px;
+              cursor:pointer;font-size:12px;font-weight:700;font-family:'Noto Sans KR',sans-serif;
+              background:${i===0?'var(--gold-light)':'transparent'};color:${i===0?'var(--gold)':'var(--muted)'};
+              transition:all .15s;text-align:center">
+            ${t.l}
+          </button>`).join('')}
+      </div>
+    </div>
+    <div style="margin-bottom:20px">
+      <label class="label">선 색상</label>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px">
+        ${[
+          {v:'#235f62',label:'초록',bg:'#235f62'},
+          {v:'#c4922a',label:'금색',bg:'#c4922a'},
+          {v:'#b5451b',label:'빨강',bg:'#b5451b'},
+          {v:'#3949ab',label:'파랑',bg:'#3949ab'},
+          {v:'#7b1fa2',label:'보라',bg:'#7b1fa2'},
+          {v:'#555555',label:'회색',bg:'#555555'},
+        ].map((c,i)=>`
+          <label style="cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;font-size:10px;color:var(--muted)">
+            <input type="radio" name="edge-color" value="${c.v}" ${i===0?'checked':''} style="display:none">
+            <div style="width:28px;height:28px;border-radius:50%;background:${c.bg};border:3px solid transparent;transition:border-color .15s"
+              onclick="document.querySelectorAll('[name=edge-color]').forEach(r=>r.parentNode.querySelector('div').style.borderColor='transparent');this.style.borderColor='var(--gold)'">
+            </div>
+            ${c.label}
+          </label>`).join('')}
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">취소</button>
+      <button class="btn btn-gold" onclick="addEdge('${fromId}','${toId}')">연결</button>
+    </div>`);
+  setTimeout(()=>document.getElementById('edge-label')?.focus(),100);
+}
+
+function addEdge(fromId, toId) {
+  const label = document.getElementById('edge-label')?.value.trim()||'';
+  const dir = document.querySelector('#edge-dir-group button[data-selected]')?.dataset.val||'forward';
+  const style = document.querySelector('#edge-style-group button[data-selected]')?.dataset.val||'solid';
+  const color = document.querySelector('input[name="edge-color"]:checked')?.value||'#235f62';
+  const dg = getActiveDiagram();
+  if (!dg.edges) dg.edges = [];
+  dg.edges.push({from:fromId, to:toId, label, dir, style, color});
+  saveDiagram(); closeModal(); renderDiagramCanvas();
+  toast('연결됐어요!');
+}
+
+function showNodeContextMenu(id, x, y) {
+  const existing = document.getElementById('node-ctx-menu');
+  if (existing) existing.remove();
+  const menu = document.createElement('div');
+  menu.id = 'node-ctx-menu';
+  menu.style.cssText = `position:fixed;left:${x}px;top:${y}px;background:var(--white);
+    border:1px solid var(--border);border-radius:10px;padding:6px;
+    box-shadow:0 4px 20px var(--shadow);z-index:9000;min-width:130px`;
+  menu.innerHTML = `
+    <button onclick="showEditNodeModal('${id}');document.getElementById('node-ctx-menu')?.remove()"
+      style="display:block;width:100%;text-align:left;padding:8px 12px;border:none;background:none;cursor:pointer;border-radius:6px;font-size:13px;font-family:'Noto Sans KR',sans-serif">✏️ 편집</button>
+    <button onclick="dgState.connecting=true;dgState.connectFrom='${id}';document.getElementById('node-ctx-menu')?.remove();toast('연결할 노드를 탭하세요')"
+      style="display:block;width:100%;text-align:left;padding:8px 12px;border:none;background:none;cursor:pointer;border-radius:6px;font-size:13px;font-family:'Noto Sans KR',sans-serif">🔗 연결하기</button>
+    <hr style="border:none;border-top:1px solid var(--border);margin:4px 0">
+    <button onclick="deleteNode('${id}');document.getElementById('node-ctx-menu')?.remove()"
+      style="display:block;width:100%;text-align:left;padding:8px 12px;border:none;background:none;cursor:pointer;border-radius:6px;font-size:13px;color:var(--rust);font-family:'Noto Sans KR',sans-serif">🗑️ 삭제</button>
+  `;
+  document.body.appendChild(menu);
+  setTimeout(()=>document.addEventListener('click',()=>menu.remove(),{once:true}),50);
+}
+
+
+// ═══════════════════════════════════════════════════════════════
+// MEMO PAD
+// ═══════════════════════════════════════════════════════════════
+const MEMO_COLORS = [
+  {bg:'#fffde7',border:'#ffe082',label:'노랑'},
+  {bg:'#e8f5e9',border:'#a5d6a7',label:'초록'},
+  {bg:'#e3f2fd',border:'#90caf9',label:'파랑'},
+  {bg:'#fce4ec',border:'#f48fb1',label:'핑크'},
+  {bg:'#f3e5f5',border:'#ce93d8',label:'보라'},
+  {bg:'#fff3e0',border:'#ffcc80',label:'주황'},
+  {bg:'#ffffff',border:'#ddd3be',label:'흰색'},
+];
+
+function getMemos() {
+  const p = getProject();
+  if (!p.memos) p.memos = [];
+  return p.memos;
+}
+
+function saveMemos() { autoSave(); }
+
+function renderMemo() {
+  const memos = getMemos();
+  document.getElementById('main').innerHTML = `
+    <div style="max-width:1000px;margin:0 auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <div class="font-display" style="font-size:22px">메모장 (${memos.length})</div>
+        <button class="btn btn-gold" onclick="addMemo()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          메모 추가
+        </button>
+      </div>
+      ${memos.length === 0
+        ? `<div class="card empty-state"><div class="emoji">📝</div><p>메모를 추가해보세요.<br>아이디어, 설정, 대사 등 뭐든 자유롭게!</p></div>`
+        : `<div class="memo-grid">${memos.map((m,i) => renderMemoCard(m,i)).join('')}</div>`}
+    </div>`;
+}
+
+function renderMemoCard(m, i) {
+  const col = MEMO_COLORS.find(c=>c.bg===m.color) || MEMO_COLORS[0];
+  return `
+    <div class="memo-card" style="background:${col.bg};border-color:${col.border}">
+      <div class="memo-card-header" style="border-color:${col.border}">
+        <input class="memo-card-title" value="${esc(m.title||'')}"
+          oninput="updateMemo(${i},'title',this.value)" placeholder="제목">
+        <div style="display:flex;align-items:center;gap:6px">
+          <div class="memo-color-dot" style="background:${col.bg};border-color:${col.border}"
+            onclick="showMemoColorPicker(${i},this)"></div>
+          <button class="btn-icon" onclick="deleteMemo(${i})" style="color:var(--rust);width:28px;height:28px">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+          </button>
+        </div>
+      </div>
+      <textarea class="memo-card-body" rows="6"
+        oninput="updateMemo(${i},'content',this.value)"
+        placeholder="자유롭게 메모하세요...">${esc(m.content||'')}</textarea>
+      <div style="padding:6px 14px 10px;font-size:10px;color:var(--muted)">
+        ${m.updatedAt ? new Date(m.updatedAt).toLocaleDateString('ko-KR') : ''}
+      </div>
+    </div>`;
+}
+
+function addMemo() {
+  const p = getProject();
+  if (!p.memos) p.memos = [];
+  p.memos.unshift({
+    id: uid(), title:'', content:'',
+    color: MEMO_COLORS[0].bg,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  });
+  saveMemos(); renderMemo();
+  // 첫 번째 메모 제목에 포커스
+  setTimeout(() => document.querySelector('.memo-card-title')?.focus(), 100);
+}
+
+function updateMemo(i, key, val) {
+  const p = getProject();
+  if (!p.memos?.[i]) return;
+  p.memos[i][key] = val;
+  p.memos[i].updatedAt = new Date().toISOString();
+  clearTimeout(window._memoSaveTimer);
+  window._memoSaveTimer = setTimeout(saveMemos, 600);
+}
+
+function deleteMemo(i) {
+  confirmDialog('이 메모를 삭제합니다.', () => {
+    getProject().memos.splice(i, 1);
+    saveMemos(); renderMemo();
+    toast('메모를 삭제했어요.');
+  });
+}
+
+function showMemoColorPicker(i, dotEl) {
+  const existing = document.getElementById('memo-color-picker');
+  if (existing) { existing.remove(); return; }
+  const picker = document.createElement('div');
+  picker.id = 'memo-color-picker';
+  const rect = dotEl.getBoundingClientRect();
+  picker.style.cssText = `position:fixed;left:${rect.left-60}px;top:${rect.bottom+6}px;
+    background:var(--white);border:1px solid var(--border);border-radius:10px;
+    padding:10px;box-shadow:0 4px 20px var(--shadow);z-index:9000;
+    display:flex;gap:8px;flex-wrap:wrap;width:180px`;
+  picker.innerHTML = MEMO_COLORS.map(c => `
+    <div onclick="setMemoColor(${i},'${c.bg}');document.getElementById('memo-color-picker')?.remove()"
+      title="${c.label}"
+      style="width:28px;height:28px;border-radius:50%;background:${c.bg};
+        border:2px solid ${c.border};cursor:pointer;transition:transform .15s"
+      onmouseover="this.style.transform='scale(1.2)'"
+      onmouseout="this.style.transform=''">
+    </div>`).join('');
+  document.body.appendChild(picker);
+  setTimeout(() => document.addEventListener('click', () => picker.remove(), {once:true}), 50);
+}
+
+function setMemoColor(i, color) {
+  const p = getProject();
+  if (!p.memos?.[i]) return;
+  p.memos[i].color = color;
+  saveMemos(); renderMemo();
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// 특수기호 팔레트
+// ═══════════════════════════════════════════════════════════
+const SYMBOL_GROUPS = [
+  {label:'따옴표', s:['"','"','‘','’','「','」','『','』','〈','〉','《','》','(',')']},
+  {label:'점·선',  s:['…','·','—','–','~','～','•','―']},
+  {label:'기호',   s:['○','●','□','■','△','▲','▽','▼','◇','◆','☆','★','×','✕','✓','※']},
+  {label:'숫자원', s:['①','②','③','④','⑤','⑥','⑦','⑧','⑨','⑩']},
+  {label:'화살표', s:['→','←','↑','↓','↔','⇒','⇐','⇔']},
+];
+
+function buildSymbolPalette(){
+  const pal=document.getElementById('symbol-palette');
+  if(!pal||pal.dataset.built) return;
+  pal.dataset.built='1';
+  SYMBOL_GROUPS.forEach(grp=>{
+    const lbl=document.createElement('div');
+    lbl.style.cssText='width:100%;font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1px;margin-top:6px;margin-bottom:2px';
+    lbl.textContent=grp.label;
+    pal.appendChild(lbl);
+    grp.s.forEach(sym=>{
+      const btn=document.createElement('button');
+      btn.className='sym-btn';
+      btn.textContent=sym;
+      btn.title=sym;
+      btn.onclick=()=>insertSymbol(sym);
+      pal.appendChild(btn);
+    });
+  });
+}
+
+function toggleSymbolPalette(){
+  const pal=document.getElementById('symbol-palette');
+  const tog=document.getElementById('sym-toggle-btn');
+  if(!pal) return;
+  buildSymbolPalette();
+  const open=pal.style.display!=='none'&&pal.style.display!=='';
+  pal.style.display=open?'none':'flex';
+  if(tog){
+    tog.style.background=open?'':'var(--gold-light)';
+    tog.style.borderColor=open?'':'var(--gold)';
+    tog.style.color=open?'':'var(--gold)';
+  }
+}
+
+function insertSymbol(sym){
+  const ta=document.getElementById('prose-editor');
+  if(!ta) return;
+  const s=ta.selectionStart, e=ta.selectionEnd;
+  ta.value=ta.value.slice(0,s)+sym+ta.value.slice(e);
+  ta.selectionStart=ta.selectionEnd=s+sym.length;
+  ta.focus();
+  ta.dispatchEvent(new Event('input',{bubbles:true}));
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// 단축키 설정
+// ═══════════════════════════════════════════════════════════
+const ALL_SYMBOLS = [
+  '"','"','‘','’','…','·','—','–','~',
+  '「','」','『','』','〈','〉','《','》','(',')',
+  '○','●','□','■','△','▲','☆','★','×','✓','※','·','•',
+  '→','←','↑','↓','↔','⇒','①','②','③','④','⑤',
+];
+
+function showShortcutSettings() {
+  const keys = ['1','2','3','4','5','6','7','8','9','0'];
+  const symOpts = ALL_SYMBOLS.map(s =>
+    `<option value="${s}">${s}</option>`
+  ).join('');
+
+  const rows = keys.map(k => {
+    const cur = SHORTCUT_SYMBOLS[k] || '';
+    return `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="font-size:13px;font-weight:700;color:var(--muted);min-width:70px">
+          Ctrl + <span style="background:var(--cream);border:1px solid var(--border);border-radius:5px;padding:2px 8px;color:var(--ink)">${k}</span>
+        </div>
+        <select id="sc-${k}" style="flex:1;padding:6px 10px;font-size:15px;font-family:'Noto Serif KR',serif">
+          <option value="">없음</option>
+          ${ALL_SYMBOLS.map(s => `<option value="${s}" ${s===cur?'selected':''}>${s} ${s===cur?'(현재)':''}</option>`).join('')}
+        </select>
+        <input id="sci-${k}" value="${cur}" maxlength="2"
+          style="width:52px;text-align:center;font-size:18px;font-family:'Noto Serif KR',serif;padding:6px"
+          placeholder="직접"
+          oninput="document.getElementById('sc-${k}').value=''"
+        >
+      </div>`;
+  }).join('');
+
+  showModal(`
+    <div class="modal-title">⚙ 단축키 설정</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:14px">
+      목록에서 선택하거나 오른쪽 칸에 직접 입력하세요. (최대 2자)
+    </div>
+    <div style="margin-bottom:20px">${rows}</div>
+    <div style="display:flex;gap:10px;justify-content:space-between">
+      <button class="btn btn-outline" onclick="resetShortcuts()">기본값으로</button>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-outline" onclick="closeModal()">취소</button>
+        <button class="btn btn-gold" onclick="applyShortcuts()">저장</button>
+      </div>
+    </div>
+  `, false);
+}
+
+function applyShortcuts() {
+  const keys = ['1','2','3','4','5','6','7','8','9','0'];
+  const newMap = {};
+  keys.forEach(k => {
+    const direct = document.getElementById('sci-' + k)?.value.trim();
+    const sel    = document.getElementById('sc-' + k)?.value;
+    newMap[k] = direct || sel || '';
+  });
+  SHORTCUT_SYMBOLS = newMap;
+  saveShortcuts(newMap);
+  closeModal();
+  refreshShortcutBar();
+  toast('단축키가 저장됐습니다 ✓');
+}
+
+function resetShortcuts() {
+  if (!confirm('기본값으로 초기화하시겠습니까?')) return;
+  SHORTCUT_SYMBOLS = { ...DEFAULT_SHORTCUTS };
+  saveShortcuts(SHORTCUT_SYMBOLS);
+  closeModal();
+  refreshShortcutBar();
+  toast('기본값으로 초기화됐습니다.');
+}
+
+function refreshShortcutBar() {
+  const bar = document.getElementById('shortcut-bar');
+  if (!bar) return;
+  bar.innerHTML = '';
+
+  // 라벨
+  const lbl = document.createElement('span');
+  lbl.style.cssText = 'font-size:10px;font-weight:700;color:var(--muted);margin-right:4px;letter-spacing:.5px;flex-shrink:0';
+  lbl.textContent = '단축키';
+  bar.appendChild(lbl);
+
+  // 기호 버튼
+  const keys = ['1','2','3','4','5','6','7','8','9','0'];
+  keys.forEach(k => {
+    const sym = SHORTCUT_SYMBOLS[k];
+    if (!sym) return;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.title = 'Ctrl+' + k;
+    btn.style.cssText = 'display:inline-flex;align-items:center;gap:2px;background:var(--white);border:1px solid var(--border);border-radius:5px;padding:3px 8px;font-size:15px;color:var(--ink);cursor:pointer;font-family:"Noto Serif KR",serif;line-height:1';
+    const small = document.createElement('span');
+    small.style.cssText = 'font-size:9px;color:var(--muted);margin-right:2px;font-family:"Noto Sans KR",sans-serif';
+    small.textContent = '^' + k;
+    const symSpan = document.createElement('span');
+    symSpan.textContent = sym;
+    btn.appendChild(small);
+    btn.appendChild(symSpan);
+    btn.addEventListener('click', () => insertSymbol(sym));
+    bar.appendChild(btn);
+  });
+
+  // 인디케이터
+  const ind = document.createElement('span');
+  ind.id = 'shortcut-indicator';
+  ind.style.cssText = 'font-size:22px;font-weight:700;color:var(--gold);opacity:0;transition:opacity .3s;min-width:28px;text-align:center';
+  bar.appendChild(ind);
+
+  // 설정 버튼
+  const cfg = document.createElement('button');
+  cfg.type = 'button';
+  cfg.textContent = '⚙ 단축키 설정';
+  cfg.style.cssText = 'margin-left:auto;flex-shrink:0;background:transparent;border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:11px;font-weight:600;color:var(--muted);cursor:pointer;font-family:"Noto Sans KR",sans-serif';
+  cfg.addEventListener('click', showShortcutSettings);
+  bar.appendChild(cfg);
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// 원고 설정 & 미리보기
+// ═══════════════════════════════════════════════════════════
+const MS_PRESETS = [
+  {
+    id: 'kakao', name: '카카오페이지', icon: '🟡',
+    desc: '모바일 최적화 · 짧은 호흡',
+    width: 360, font: 'Noto Serif KR', size: 16, line: 1.9,
+    padH: 20, padV: 24, charsPerLine: 20, linesPerPage: 22,
+  },
+  {
+    id: 'ridi', name: '리디', icon: '📗',
+    desc: '전자책 리더 최적화',
+    width: 420, font: 'Noto Serif KR', size: 17, line: 1.85,
+    padH: 28, padV: 32, charsPerLine: 23, linesPerPage: 20,
+  },
+  {
+    id: 'joara', name: '조아라', icon: '📘',
+    desc: 'PC/모바일 범용',
+    width: 680, font: 'Noto Sans KR', size: 15, line: 1.8,
+    padH: 40, padV: 40, charsPerLine: 38, linesPerPage: 25,
+  },
+  {
+    id: 'munpia', name: '문피아', icon: '📙',
+    desc: 'PC 웹 최적화',
+    width: 720, font: 'Noto Sans KR', size: 15, line: 1.8,
+    padH: 48, padV: 40, charsPerLine: 40, linesPerPage: 25,
+  },
+  {
+    id: 'naver', name: '네이버 시리즈', icon: '🟢',
+    desc: '모바일 앱 최적화',
+    width: 375, font: 'Noto Serif KR', size: 16, line: 1.9,
+    padH: 18, padV: 24, charsPerLine: 20, linesPerPage: 22,
+  },
+  {
+    id: 'custom', name: '직접 설정', icon: '⚙️',
+    desc: '너비·글꼴·크기 직접 지정',
+    width: 480, font: 'Noto Serif KR', size: 16, line: 1.85,
+    padH: 24, padV: 28, charsPerLine: 26, linesPerPage: 22,
+  },
+];
+
+function getMsConfig(p) {
+  return p.msConfig || { presetId: 'kakao', ...MS_PRESETS[0] };
+}
+
+function renderManuscript() {
+  const p = getProject();
+  const cfg = getMsConfig(p);
+  const preset = MS_PRESETS.find(pr => pr.id === cfg.presetId) || MS_PRESETS[0];
+  const chapters = p.chapters || [];
+
+  document.getElementById('main').innerHTML = `
+    <div style="max-width:900px;margin:0 auto">
+      <div class="font-display" style="font-size:22px;margin-bottom:22px">원고 설정</div>
+
+      <!-- 플랫폼 프리셋 -->
+      <div class="card" style="margin-bottom:16px">
+        <div class="sec-title">플랫폼 선택</div>
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px" id="ms-preset-group">
+          ${MS_PRESETS.map(pr => {
+            const sel = cfg.presetId === pr.id;
+            return `<button type="button" onclick="selectMsPreset('${pr.id}')"
+              data-val="${pr.id}"
+              style="padding:12px 10px;border:2px solid ${sel?'var(--gold)':'var(--border)'};
+                border-radius:10px;cursor:pointer;text-align:center;
+                background:${sel?'var(--gold-light)':'var(--white)'};transition:all .15s;
+                font-family:'Noto Sans KR',sans-serif">
+              <div style="font-size:22px;margin-bottom:4px">${pr.icon}</div>
+              <div style="font-size:13px;font-weight:700;color:${sel?'var(--gold)':'var(--ink)'}">${pr.name}</div>
+              <div style="font-size:11px;color:var(--muted);margin-top:2px">${pr.desc}</div>
+            </button>`;
+          }).join('')}
+        </div>
+      </div>
+
+      <!-- 세부 설정 -->
+      <div class="card" style="margin-bottom:16px" id="ms-detail">
+        <div class="sec-title">세부 설정
+          ${cfg.presetId !== 'custom' ? '<span style="font-size:10px;color:var(--muted);font-weight:400;margin-left:6px">직접 설정 선택 시 수정 가능</span>' : ''}
+        </div>
+        <div class="form-grid">
+          <div><label class="label">너비 (px)</label>
+            <input type="number" id="ms-width" value="${cfg.width||480}" ${cfg.presetId!=='custom'?'readonly style="opacity:.6"':''}
+              onchange="updateMsConfig('width',+this.value)"></div>
+          <div><label class="label">글꼴</label>
+            <select id="ms-font" ${cfg.presetId!=='custom'?'disabled style="opacity:.6"':''}
+              onchange="updateMsConfig('font',this.value)">
+              ${['Noto Serif KR','Noto Sans KR','나눔명조','나눔고딕'].map(f=>
+                `<option value="${f}" ${(cfg.font||'Noto Serif KR')===f?'selected':''}>${f}</option>`
+              ).join('')}
+            </select>
+          </div>
+          <div><label class="label">글자 크기 (px)</label>
+            <input type="number" id="ms-size" value="${cfg.size||16}" min="12" max="24" ${cfg.presetId!=='custom'?'readonly style="opacity:.6"':''}
+              onchange="updateMsConfig('size',+this.value)"></div>
+          <div><label class="label">줄 간격</label>
+            <input type="number" id="ms-line" value="${cfg.line||1.85}" min="1.4" max="2.5" step="0.05" ${cfg.presetId!=='custom'?'readonly style="opacity:.6"':''}
+              onchange="updateMsConfig('line',+this.value)"></div>
+          <div><label class="label">좌우 여백 (px)</label>
+            <input type="number" id="ms-padH" value="${cfg.padH||24}" ${cfg.presetId!=='custom'?'readonly style="opacity:.6"':''}
+              onchange="updateMsConfig('padH',+this.value)"></div>
+          <div><label class="label">상하 여백 (px)</label>
+            <input type="number" id="ms-padV" value="${cfg.padV||28}" ${cfg.presetId!=='custom'?'readonly style="opacity:.6"':''}
+              onchange="updateMsConfig('padV',+this.value)"></div>
+        </div>
+      </div>
+
+      <!-- 미리보기 -->
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+          <div class="sec-title" style="margin:0">미리보기</div>
+          <div style="display:flex;gap:8px;align-items:center">
+            <select id="ms-ch-select" onchange="updateMsPreview()" style="width:140px;font-size:12px;padding:5px 8px">
+              ${chapters.length===0
+                ? '<option>화가 없습니다</option>'
+                : chapters.map((c,i)=>`<option value="${i}">${esc(c.title)}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div style="overflow-x:auto;padding:8px 0">
+          <div id="ms-preview-wrap" style="margin:0 auto;transition:all .3s"></div>
+        </div>
+      </div>
+    </div>`;
+
+  updateMsPreview();
+}
+
+function selectMsPreset(id) {
+  const p = getProject();
+  const preset = MS_PRESETS.find(pr => pr.id === id) || MS_PRESETS[0];
+  p.msConfig = { ...preset, presetId: id };
+  autoSave();
+  renderManuscript();
+}
+
+function updateMsConfig(key, val) {
+  const p = getProject();
+  if (!p.msConfig) p.msConfig = { presetId:'custom', ...MS_PRESETS[5] };
+  p.msConfig[key] = val;
+  autoSave();
+  updateMsPreview();
+}
+
+function updateMsPreview() {
+  const p = getProject();
+  const cfg = getMsConfig(p);
+  const chapters = p.chapters || [];
+  const selEl = document.getElementById('ms-ch-select');
+  const chIdx = selEl ? parseInt(selEl.value) || 0 : 0;
+  const ch = chapters[chIdx];
+  const wrap = document.getElementById('ms-preview-wrap');
+  if (!wrap) return;
+
+  const text = ch ? (ch.content || '(내용 없음)') : '(화를 먼저 추가하세요)';
+  const title = ch ? ch.title : '';
+  // 첫 500자만 미리보기
+  const preview = text.length > 500 ? text.slice(0, 500) + '…' : text;
+  const totalChars = text.length;
+  const charsPerPage = (cfg.charsPerLine||24) * (cfg.linesPerPage||22);
+  const totalPages = Math.ceil(totalChars / charsPerPage);
+
+  wrap.style.width = (cfg.width || 480) + 'px';
+  wrap.innerHTML = `
+    <div class="ms-preview" style="width:${cfg.width||480}px;
+      --ms-pad-h:${cfg.padH||24}px;--ms-pad-v:${cfg.padV||28}px;
+      --ms-font:'${cfg.font||'Noto Serif KR'}';--ms-size:${cfg.size||16}px;
+      --ms-line:${cfg.line||1.85};--ms-height:auto;">
+      <div class="ms-header">
+        <span>${esc(p.title||'제목 없음')}</span>
+        <span>${esc(title)} · ${totalChars.toLocaleString()}자 · 약 ${totalPages}페이지</span>
+      </div>
+      <div class="ms-page">${esc(preview)}</div>
+      ${text.length > 500 ? `<div style="text-align:center;padding:10px;font-size:12px;color:var(--muted);background:#fafafa;border-top:1px solid #eee">미리보기는 500자까지 표시됩니다</div>` : ''}
+    </div>`;
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// 내보내기 기능
+// ═══════════════════════════════════════════════════════════
+
+// 클립보드 복사 (화 선택 or 전체)
+function copyToClipboard(chId) {
+  const p = getProject();
+  let text = '';
+  if (chId) {
+    const ch = (p.chapters||[]).find(c => c.id === chId);
+    if (!ch) return;
+    text = ch.title + '\n\n' + (ch.content||'');
+  } else {
+    text = (p.chapters||[]).map(c => c.title + '\n\n' + (c.content||'')).join('\n\n' + '─'.repeat(20) + '\n\n');
+  }
+  navigator.clipboard.writeText(text).then(() => {
+    toast('클립보드에 복사됐어요! 📋');
+  }).catch(() => {
+    // 폴백: textarea 방식
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    toast('클립보드에 복사됐어요! 📋');
+  });
+}
+
+// TXT 저장
+function exportTxt(chId) {
+  const p = getProject();
+  let text = '', filename = '';
+  if (chId) {
+    const ch = (p.chapters||[]).find(c => c.id === chId);
+    if (!ch) return;
+    text = ch.title + '\n\n' + (ch.content||'');
+    filename = (p.title||'작품') + '_' + ch.title + '.txt';
+  } else {
+    text = (p.chapters||[]).map(c => c.title + '\n\n' + (c.content||'')).join('\n\n' + '─'.repeat(30) + '\n\n');
+    filename = (p.title||'작품') + '_전체.txt';
+  }
+  const blob = new Blob([text], {type: 'text/plain;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  toast('TXT 파일이 저장됐어요! 📄');
+}
+
+// DOCX 저장 (HTML → Word 변환 방식)
+function exportDocx(chId) {
+  const p = getProject();
+  let chapters = [], filename = '';
+  if (chId) {
+    const ch = (p.chapters||[]).find(c => c.id === chId);
+    if (!ch) return;
+    chapters = [ch];
+    filename = (p.title||'작품') + '_' + ch.title + '.docx';
+  } else {
+    chapters = p.chapters || [];
+    filename = (p.title||'작품') + '_전체.docx';
+  }
+
+  // Word XML 생성
+  const paragraphs = chapters.map(ch => {
+    const lines = (ch.content||'').split('\n');
+    const titleXml = `<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t>${escXml(ch.title)}</w:t></w:r></w:p>`;
+    const contentXml = lines.map(line =>
+      `<w:p><w:r><w:rPr><w:sz w:val="28"/><w:szCs w:val="28"/></w:rPr><w:t xml:space="preserve">${escXml(line)}</w:t></w:r></w:p>`
+    ).join('');
+    return titleXml + contentXml;
+  }).join('<w:p><w:r><w:t></w:t></w:r></w:p>');
+
+  const docXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    <w:p><w:pPr><w:jc w:val="center"/></w:pPr>
+      <w:r><w:rPr><w:b/><w:sz w:val="36"/></w:rPr><w:t>${escXml(p.title||'제목 없음')}</w:t></w:r>
+    </w:p>
+    <w:p><w:r><w:t></w:t></w:r></w:p>
+    ${paragraphs}
+  </w:body>
+</w:document>`;
+
+  const relsXml = `<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`;
+
+  const wordRelsXml = `<?xml version="1.0" encoding="UTF-8"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+</Relationships>`;
+
+  const contentTypesXml = `<?xml version="1.0" encoding="UTF-8"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+</Types>`;
+
+  // JSZip으로 패키징
+  const script = document.createElement('script');
+  script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+  script.onload = () => {
+    const zip = new JSZip();
+    zip.file('[Content_Types].xml', contentTypesXml);
+    zip.file('_rels/.rels', relsXml);
+    zip.file('word/document.xml', docXml);
+    zip.file('word/_rels/document.xml.rels', wordRelsXml);
+    zip.generateAsync({type:'blob', mimeType:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'})
+      .then(blob => {
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = filename;
+        a.click();
+        toast('DOCX 파일이 저장됐어요! 📝');
+      });
+  };
+  script.onerror = () => {
+    // JSZip 로드 실패 시 TXT로 폴백
+    toast('DOCX 변환 실패 — TXT로 저장합니다');
+    exportTxt(chId);
+  };
+  if (!window.JSZip) {
+    document.head.appendChild(script);
+  } else {
+    script.onload();
+  }
+}
+
+function escXml(str) {
+  return (str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&apos;');
+}
+
+// 내보내기 모달
+function showExportModal() {
+  const p = getProject();
+  const chapters = p.chapters || [];
+  if (chapters.length === 0) { toast('집필된 화가 없습니다.'); return; }
+
+  showModal(`
+    <div class="modal-title">📤 내보내기</div>
+    <div style="margin-bottom:16px">
+      <label class="label">화 선택</label>
+      <select id="exp-ch" style="margin-bottom:4px">
+        <option value="">전체 (${chapters.length}화)</option>
+        ${chapters.map(c => `<option value="${c.id}">${esc(c.title)} (${(c.content||'').length.toLocaleString()}자)</option>`).join('')}
+      </select>
+    </div>
+    <div style="display:grid;gap:10px;margin-bottom:20px">
+      <button class="btn btn-gold" onclick="copyToClipboard(document.getElementById('exp-ch').value)" style="justify-content:center;font-size:14px;padding:12px">
+        📋 클립보드 복사 (플랫폼 붙여넣기용)
+      </button>
+      <button class="btn btn-outline" onclick="exportTxt(document.getElementById('exp-ch').value)" style="justify-content:center;font-size:14px;padding:12px">
+        📄 TXT 파일로 저장
+      </button>
+      <button class="btn btn-outline" onclick="exportDocx(document.getElementById('exp-ch').value)" style="justify-content:center;font-size:14px;padding:12px">
+        📝 DOCX (Word) 파일로 저장
+      </button>
+      <button class="btn btn-outline" onclick="exportData()" style="justify-content:center;font-size:14px;padding:12px;border-color:var(--teal);color:var(--teal)">
+        💾 JSON 백업 저장 (전체 데이터)
+      </button>
+    </div>
+    <div style="font-size:11px;color:var(--muted);background:var(--cream);border-radius:8px;padding:10px 12px;line-height:1.7">
+      💡 <b>클립보드 복사</b>: 카카오페이지·리디 등 웹 에디터에 바로 붙여넣기<br>
+      💡 <b>TXT</b>: 메모장·기타 도구에서 열기<br>
+      💡 <b>DOCX</b>: MS Word·한컴오피스에서 열기<br>
+      💡 <b>JSON</b>: 앱 데이터 전체 백업 (캐릭터·플롯 포함)
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">닫기</button>
+    </div>
+  `);
+}
+
+
+function showChExportMenu(chId) {
+  const p = getProject();
+  const ch = (p.chapters||[]).find(c => c.id === chId);
+  if (!ch) return;
+  showModal(`
+    <div class="modal-title">📤 ${esc(ch.title)} 내보내기</div>
+    <div style="display:grid;gap:10px;margin-bottom:20px">
+      <button class="btn btn-gold" onclick="copyToClipboard('${chId}');closeModal()" style="justify-content:center;font-size:14px;padding:12px">
+        📋 클립보드 복사
+      </button>
+      <button class="btn btn-outline" onclick="exportTxt('${chId}');closeModal()" style="justify-content:center;font-size:14px;padding:12px">
+        📄 TXT 저장
+      </button>
+      <button class="btn btn-outline" onclick="exportDocx('${chId}');closeModal()" style="justify-content:center;font-size:14px;padding:12px">
+        📝 DOCX 저장
+      </button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">닫기</button>
+    </div>
+  `);
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// 커스텀 확인 모달 (태블릿 confirm 대체)
+// ═══════════════════════════════════════════════════════════
+function confirmDialog(msg, onOk) {
+  const bg = document.createElement('div');
+  bg.style.cssText = 'position:fixed;inset:0;background:rgba(24,18,10,.55);backdrop-filter:blur(4px);z-index:9999;display:flex;align-items:center;justify-content:center;animation:fadein .15s';
+  bg.innerHTML = `
+    <div style="background:var(--paper);border:1px solid var(--border);border-radius:14px;
+      padding:24px;width:300px;max-width:90vw;box-shadow:0 20px 60px rgba(24,18,10,.3);
+      animation:sup .2s;text-align:center">
+      <div style="font-size:28px;margin-bottom:12px">🗑️</div>
+      <div style="font-size:15px;font-weight:600;color:var(--ink);margin-bottom:6px">정말 삭제하시겠습니까?</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:20px">${msg}</div>
+      <div style="display:flex;gap:10px;justify-content:center">
+        <button onclick="this.closest('div[style*=fixed]').remove()"
+          style="flex:1;padding:10px;border:1.5px solid var(--border);border-radius:8px;
+            background:transparent;color:var(--muted);cursor:pointer;font-size:14px;
+            font-weight:600;font-family:'Noto Sans KR',sans-serif">취소</button>
+        <button id="confirm-ok-btn"
+          style="flex:1;padding:10px;border:none;border-radius:8px;
+            background:var(--rust);color:#fff;cursor:pointer;font-size:14px;
+            font-weight:700;font-family:'Noto Sans KR',sans-serif">삭제</button>
+      </div>
+    </div>`;
+  document.body.appendChild(bg);
+  bg.querySelector('#confirm-ok-btn').onclick = () => { bg.remove(); onOk(); };
+  bg.addEventListener('click', e => { if (e.target === bg) bg.remove(); });
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// 분할 패널 (참고 패널)
+// ═══════════════════════════════════════════════════════════
+let splitTab = 'overview';
+
+function toggleSplitPanel() {
+  const panel = document.getElementById('split-panel');
+  const btn   = document.getElementById('split-toggle-btn');
+  if (!panel) return;
+  const isHidden = panel.classList.contains('hidden');
+  if (isHidden) {
+    panel.classList.remove('hidden');
+    if (btn) { btn.style.background='var(--gold-light)'; btn.style.borderColor='var(--gold)'; btn.style.color='var(--gold)'; btn.textContent='⊠ 참고'; }
+    renderSplitContent();
+  } else {
+    panel.classList.add('hidden');
+    if (btn) { btn.style.background=''; btn.style.borderColor=''; btn.style.color=''; btn.textContent='⊞ 참고'; }
+  }
+}
+
+function switchSplitTab(tab) {
+  splitTab = tab;
+  document.querySelectorAll('.split-tab').forEach(b => {
+    const match = b.getAttribute('onclick')?.includes("'" + tab + "'");
+    b.classList.toggle('active', !!match);
+  });
+  renderSplitContent();
+}
+
+function renderSplitContent() {
+  const el = document.getElementById('split-content');
+  if (!el) return;
+  const p = getProject();
+  if (!p) { el.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px">작품을 먼저 열어주세요</div>'; return; }
+
+  if (splitTab === 'overview') {
+    el.innerHTML = `
+      <div style="margin-bottom:14px">
+        <label class="label">작품 제목</label>
+        <input value="${esc(p.title||'')}" oninput="updateSplitField('title',this.value)"
+          style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:14px;font-weight:700;background:var(--white);color:var(--ink)">
+      </div>
+      <div style="margin-bottom:14px">
+        <label class="label">장르</label>
+        <select onchange="updateSplitField('genre',this.value)"
+          style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--white);color:var(--ink)">
+          ${selOpts(GENRES, p.genre||'판타지')}
+        </select>
+      </div>
+      <div style="margin-bottom:14px">
+        <label class="label">상태</label>
+        <select onchange="updateSplitField('status',this.value)"
+          style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;background:var(--white);color:var(--ink)">
+          ${selOpts(STATUSES, p.status||'기획중')}
+        </select>
+      </div>
+      <div style="margin-bottom:14px">
+        <label class="label">줄거리</label>
+        <textarea oninput="updateSplitField('synopsis',this.value)"
+          rows="8" placeholder="작품의 전체 줄거리를 입력하세요..."
+          style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;line-height:1.8;background:var(--white);color:var(--ink);resize:vertical">${esc(p.synopsis||'')}</textarea>
+      </div>
+      <div>
+        <label class="label">메모</label>
+        <textarea oninput="updateSplitField('memo',this.value)"
+          rows="4" placeholder="작가 메모..."
+          style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:8px;font-size:13px;line-height:1.8;background:var(--white);color:var(--ink);resize:vertical">${esc(p.memo||'')}</textarea>
+      </div>
+    `;
+
+  } else if (splitTab === 'characters') {
+    const chars = p.characters || [];
+    if (!chars.length) {
+      el.innerHTML = `<div style="text-align:center;padding:30px 0">
+        <div style="font-size:32px;margin-bottom:8px">👤</div>
+        <div style="color:var(--muted);font-size:13px;margin-bottom:12px">등록된 캐릭터가 없어요</div>
+        <button class="btn btn-gold btn-sm" onclick="showCharModal()">＋ 캐릭터 추가</button>
+      </div>`;
+      return;
+    }
+    el.innerHTML = `
+      <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+        <button class="btn btn-gold btn-sm" onclick="showCharModal()">＋ 추가</button>
+      </div>
+      ${chars.map((c,i) => `
+        <div style="border:1px solid var(--border);border-radius:10px;margin-bottom:12px;overflow:hidden;background:var(--white)">
+          <div style="padding:10px 12px;background:var(--cream);display:flex;justify-content:space-between;align-items:center">
+            <span style="font-weight:700;font-size:14px">${esc(c.name)}</span>
+            <div style="display:flex;gap:6px">
+              <button onclick="showCharModal(${i})" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--teal)">✏️ 편집</button>
+            </div>
+          </div>
+          <div style="padding:10px 12px">
+            ${c.role ? `<div style="margin-bottom:6px"><span style="font-size:10px;color:var(--muted)">역할</span><div style="font-size:13px">${esc(c.role)}</div></div>` : ''}
+            ${c.personality ? `<div style="margin-bottom:6px"><span style="font-size:10px;color:var(--muted)">성격</span><div style="font-size:13px">${esc(c.personality)}</div></div>` : ''}
+            ${c.background ? `<div><span style="font-size:10px;color:var(--muted)">배경</span><div style="font-size:13px">${esc(c.background)}</div></div>` : ''}
+          </div>
+        </div>`).join('')}`;
+
+  } else if (splitTab === 'plot') {
+    const arcs = p.arcs || [];
+    if (!arcs.length) {
+      el.innerHTML = `<div style="text-align:center;padding:30px 0">
+        <div style="font-size:32px;margin-bottom:8px">📐</div>
+        <div style="color:var(--muted);font-size:13px">등록된 아크가 없어요</div>
+      </div>`;
+      return;
+    }
+    el.innerHTML = arcs.map((a,ai) => `
+      <div style="margin-bottom:16px">
+        <div style="font-weight:700;font-size:13px;color:var(--gold);margin-bottom:6px;padding:6px 10px;background:var(--gold-light);border-radius:8px">${esc(a.title)}</div>
+        ${(a.scenes||[]).map((s,si) => `
+          <div style="padding:8px 10px;border-left:2px solid var(--border);margin-bottom:6px;background:var(--white);border-radius:0 8px 8px 0">
+            <div style="font-size:12px;font-weight:600;margin-bottom:4px"><span style="color:var(--muted)">#${si+1}</span> ${esc(s.title)}</div>
+            ${s.summary ? `<div style="font-size:11px;color:var(--muted);line-height:1.6">${esc(s.summary)}</div>` : ''}
+          </div>`).join('')}
+      </div>`).join('');
+
+  } else if (splitTab === 'world') {
+    const worlds = p.worldSettings || [];
+    if (!worlds.length) {
+      el.innerHTML = `<div style="text-align:center;padding:30px 0">
+        <div style="font-size:32px;margin-bottom:8px">🌍</div>
+        <div style="color:var(--muted);font-size:13px;margin-bottom:12px">세계관 설정이 없어요</div>
+        <button class="btn btn-gold btn-sm" onclick="showWorldModal()">＋ 설정 추가</button>
+      </div>`;
+      return;
+    }
+    const groups = {};
+    worlds.forEach((w,i) => {
+      const cat = w.category || '기타';
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push({...w, _i:i});
+    });
+    el.innerHTML = `
+      <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+        <button class="btn btn-gold btn-sm" onclick="showWorldModal()">＋ 추가</button>
+      </div>
+      ${Object.entries(groups).map(([cat, items]) => `
+        <div style="margin-bottom:16px">
+          <div style="font-size:10px;font-weight:700;color:var(--muted);letter-spacing:1px;margin-bottom:6px">${esc(cat)}</div>
+          ${items.map(w => `
+            <div style="border:1px solid var(--border);border-radius:10px;margin-bottom:8px;overflow:hidden;background:var(--white)">
+              <div style="padding:8px 12px;background:var(--cream);display:flex;justify-content:space-between;align-items:center">
+                <span style="font-weight:700;font-size:13px">${esc(w.title)}</span>
+                <button onclick="showWorldModal(${w._i})" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--teal)">✏️</button>
+              </div>
+              <div style="padding:8px 12px;font-size:12px;color:var(--muted);line-height:1.7;white-space:pre-wrap">${esc(w.content||'')}</div>
+            </div>`).join('')}
+        </div>`).join('')}`;
+
+  } else if (splitTab === 'diagram') {
+    const diagrams = p.diagrams || [];
+    if (!diagrams.length) {
+      el.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px">다이어그램이 없어요</div>';
+      return;
+    }
+    el.innerHTML = diagrams.map(dg => `
+      <div style="margin-bottom:16px;border:1px solid var(--border);border-radius:10px;overflow:hidden">
+        <div style="padding:8px 12px;background:var(--cream);font-weight:700;font-size:13px;color:var(--gold)">${esc(dg.title||'다이어그램')}</div>
+        <div style="padding:10px 12px">
+          ${(dg.nodes||[]).length === 0 ? '<div style="color:var(--muted);font-size:12px">노드 없음</div>' :
+            (dg.nodes||[]).map(n => `
+              <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px">
+                <span>${(DG_TYPES.find(t=>t.id===n.type)||DG_TYPES[0]).icon}</span>
+                <span style="font-weight:600">${esc(n.label)}</span>
+                ${n.sub ? `<span style="color:var(--muted)">${esc(n.sub)}</span>` : ''}
+              </div>`).join('')}
+          ${(dg.edges||[]).length > 0 ? `
+            <div style="margin-top:8px;font-size:11px;color:var(--muted);font-weight:700">연결 관계</div>
+            ${dg.edges.map(e => {
+              const fn = (dg.nodes||[]).find(n=>n.id===e.from);
+              const tn = (dg.nodes||[]).find(n=>n.id===e.to);
+              if (!fn||!tn) return '';
+              const arrow = e.dir==='both'?'↔':e.dir==='none'?'—':'→';
+              return `<div style="font-size:11px;padding:3px 0">${esc(fn.label)} ${arrow} ${esc(tn.label)}${e.label?` <span style="color:var(--muted)">(${esc(e.label)})</span>`:''}</div>`;
+            }).join('')}` : ''}
+        </div>
+      </div>`).join('');
+
+  } else if (splitTab === 'memo') {
+    const memos = p.memos || [];
+    const memoColors = ['#fff8e1','#e8f5e9','#e3f2fd','#fce4ec','#f3e5f5','#fff3e0','#e0f7fa'];
+    el.innerHTML = `
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+        ${memoColors.map(c=>`
+          <button onclick="addMemo('${c}')"
+            style="width:28px;height:28px;border-radius:50%;background:${c};
+              border:2px solid rgba(0,0,0,.1);cursor:pointer;flex-shrink:0"
+            title="메모 추가"></button>`).join('')}
+        <span style="font-size:11px;color:var(--muted);align-self:center;margin-left:4px">색상 선택 후 탭하면 추가</span>
+      </div>
+      ${memos.length === 0
+        ? '<div style="color:var(--muted);text-align:center;padding:20px;font-size:13px">＋ 위 색상을 탭해서 메모를 추가하세요</div>'
+        : memos.map((m,i) => `
+          <div style="margin-bottom:10px;border-radius:10px;overflow:hidden;border:1px solid rgba(0,0,0,.1)">
+            <textarea oninput="updateSplitMemo(${i},this.value)" rows="4"
+              placeholder="메모를 입력하세요..."
+              style="width:100%;padding:10px 12px;font-size:13px;line-height:1.7;
+                background:${m.color||'#fff8e1'};border:none;outline:none;resize:vertical;
+                font-family:'Noto Serif KR',serif;color:#1a1208">${esc(m.text||'')}</textarea>
+            <div style="display:flex;justify-content:flex-end;padding:4px 8px;background:${m.color||'#fff8e1'}">
+              <button onclick="deleteSplitMemo(${i})" style="background:none;border:none;cursor:pointer;font-size:11px;color:rgba(0,0,0,.4)">🗑️ 삭제</button>
+            </div>
+          </div>`).join('')}
+    `;
+  }
+}
+
+// 참고 패널에서 작품 기본 정보 수정
+function updateSplitField(key, val) {
+  const p = getProject();
+  if (!p) return;
+  p[key] = val;
+  autoSave();
+}
+
+// 참고 패널에서 메모 수정
+function updateSplitMemo(idx, val) {
+  const p = getProject();
+  if (!p || !p.memos) return;
+  p.memos[idx].text = val;
+  autoSave();
+}
+
+function deleteSplitMemo(idx) {
+  const p = getProject();
+  if (!p || !p.memos) return;
+  p.memos.splice(idx, 1);
+  autoSave();
+  renderSplitContent();
+}
+
+
+function toggleChapterList() {
+  const list = document.getElementById('chapter-list');
+  const btn  = document.getElementById('chapter-collapse-btn');
+  if (!list || !btn) return;
+  const collapsed = list.classList.toggle('collapsed');
+  btn.textContent = collapsed ? '▶' : '◀';
+}
+
+// ═══════════════════════════════════════════════════════════════
+// MODAL SYSTEM
+// ═══════════════════════════════════════════════════════════════
+function showModal(html, closable=false) {
+  closeModal();
+  const bg = document.createElement('div');
+  bg.className = 'modal-bg';
+  bg.id = 'modal-bg';
+  bg.innerHTML = `<div class="modal">${html}</div>`;
+  if (closable) {
+    bg.addEventListener('click', e => { if (e.target === bg) closeModal(); });
+  }
+  document.body.appendChild(bg);
+}
+function selectEdgeOpt(groupId, btn, val) {
+  const group = document.getElementById(groupId);
+  if (!group) return;
+  const isColorGroup = groupId === 'nd-color-group';
+  group.querySelectorAll('button').forEach(b => {
+    const active = b === btn;
+    if (isColorGroup) {
+      // 색상 원형: border만 금색으로 변경 (배경은 유지)
+      b.style.borderColor = active ? '#c4922a' : b.dataset.border || 'transparent';
+      b.style.transform   = active ? 'scale(1.2)' : 'scale(1)';
+    } else {
+      b.style.borderColor = active ? 'var(--gold)'      : 'var(--border)';
+      b.style.background  = active ? 'var(--gold-light)' : 'transparent';
+      b.style.color       = active ? 'var(--gold)'      : 'var(--muted)';
+    }
+    if (active) b.dataset.selected = '1';
+    else        delete b.dataset.selected;
+  });
+}
+
+function closeModal() {
+  const m = document.getElementById('modal-bg');
+  if (m) m.remove();
+  // 엣지 선택 해제
+  if (dgState.selectedEdgeIdx !== null) {
+    dgState.selectedEdgeIdx = null;
+    renderDiagramCanvas();
+  }
+}
+document.addEventListener('keydown', e => {
+  // ESC → 모달 닫기
+  if (e.key === 'Escape') { closeModal(); return; }
+
+  // Ctrl+S → 앱 내 저장 (어디서든)
+  if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+    e.preventDefault();
+    const p = getProject();
+    if (p) {
+      try {
+        saveToStorage();
+        setLastBackupTime();
+        const editor = document.getElementById('prose-editor');
+        const isEditing = editor && document.activeElement === editor;
+        if (isEditing) {
+          // 집필기: 화면 중앙 배너
+          showSavedBanner(true);
+        } else {
+          // 그 외: 헤더 타이틀 + 토스트
+          showSavedBanner(true);
+          const titleBtn = document.getElementById('header-title');
+          if (titleBtn) {
+            const orig = titleBtn.innerHTML;
+            titleBtn.innerHTML = '✓ 저장됨';
+            titleBtn.style.color = 'var(--gold2)';
+            setTimeout(() => { titleBtn.innerHTML = orig; titleBtn.style.color = ''; }, 1200);
+          }
+        }
+      } catch(err) {
+        showSavedBanner(false);
+      }
+    } else {
+      toast('저장할 작품을 먼저 열어주세요.');
+    }
+    return;
+  }
+
+  // Ctrl+1~0 → 특수기호 삽입 (집필 편집기에서만)
+  if ((e.ctrlKey || e.metaKey) && SHORTCUT_SYMBOLS[e.key]) {
+    const ta = document.getElementById('prose-editor');
+    if (!ta || document.activeElement !== ta) return;
+    e.preventDefault();
+    insertSymbol(SHORTCUT_SYMBOLS[e.key]);
+    const ind = document.getElementById('shortcut-indicator');
+    if (ind) {
+      ind.textContent = SHORTCUT_SYMBOLS[e.key];
+      ind.style.opacity = '1';
+      clearTimeout(ind._t);
+      ind._t = setTimeout(() => { ind.style.opacity = '0'; }, 800);
+    }
+    return;
+  }
 });
 
-self.addEventListener('message', e => {
-  if (e.data?.type === 'SKIP_WAITING') self.skipWaiting();
+
+// ═══════════════════════════════════════════════════════════
+// 단축키 초기화
+// ═══════════════════════════════════════════════════════════
+const DEFAULT_SHORTCUTS = {
+  '1': '“', '2': '”', '3': '‘', '4': '’',
+  '5': '…', '6': '·', '7': '—',
+  '8': '《', '9': '》', '0': '「',
+};
+function loadShortcuts() {
+  try {
+    const s = localStorage.getItem('wnstudio_shortcuts');
+    return s ? JSON.parse(s) : {...DEFAULT_SHORTCUTS};
+  } catch { return {...DEFAULT_SHORTCUTS}; }
+}
+function saveShortcuts(map) {
+  localStorage.setItem('wnstudio_shortcuts', JSON.stringify(map));
+}
+let SHORTCUT_SYMBOLS = loadShortcuts();
+
+
+function showSavedBanner(success=true) {
+  const existing = document.getElementById('saved-banner');
+  if (existing) { existing.remove(); }
+  const banner = document.createElement('div');
+  banner.id = 'saved-banner';
+  banner.style.cssText = `
+    position:fixed;top:50%;left:50%;
+    transform:translate(-50%,-50%);
+    background:${success ? 'var(--ink)' : 'rgba(181,69,27,.9)'};
+    color:#fff;padding:16px 32px;border-radius:40px;
+    font-size:16px;font-weight:700;
+    font-family:'Noto Sans KR',sans-serif;letter-spacing:.5px;
+    z-index:9999;pointer-events:none;
+    box-shadow:0 8px 32px rgba(0,0,0,.3);
+    opacity:0;transition:opacity .15s;
+  `;
+  banner.textContent = success ? '✓ 저장되었습니다!' : '⚠️ 저장이 되지 않았습니다.';
+  document.body.appendChild(banner);
+  requestAnimationFrame(() => { banner.style.opacity = '1'; });
+  setTimeout(() => {
+    banner.style.opacity = '0';
+    setTimeout(() => banner.remove(), 200);
+  }, success ? 1200 : 2000);
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// 다크모드
+// ═══════════════════════════════════════════════════════════
+function initDarkMode() {
+  const saved = localStorage.getItem('wnstudio_darkmode');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const isDark = saved !== null ? saved === 'true' : prefersDark;
+  applyDarkMode(isDark);
+}
+
+function applyDarkMode(isDark) {
+  document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+  const btn = document.getElementById('btn-darkmode');
+  if (btn) btn.textContent = isDark ? '☀️' : '🌙';
+  localStorage.setItem('wnstudio_darkmode', isDark);
+}
+
+function toggleDarkMode() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  applyDarkMode(!isDark);
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// localStorage 사용량 표시
+// ═══════════════════════════════════════════════════════════
+function getStorageUsage() {
+  try {
+    let total = 0;
+    for (let key in localStorage) {
+      if (!localStorage.hasOwnProperty(key)) continue;
+      total += (localStorage[key].length + key.length) * 2; // UTF-16 기준
+    }
+    return total;
+  } catch { return 0; }
+}
+
+function formatBytes(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / 1024 / 1024).toFixed(2) + ' MB';
+}
+
+function renderStorageIndicator() {
+  const el = document.getElementById('storage-indicator');
+  if (!el) return;
+
+  const used = getStorageUsage();
+  const limit = 10 * 1024 * 1024; // 10MB 기준 (Chrome Android)
+  const pct = Math.min(100, (used / limit * 100));
+  const color = pct > 80 ? 'var(--rust)' : pct > 60 ? 'var(--gold)' : 'var(--teal)';
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;gap:6px">
+      <div style="width:80px;height:6px;background:var(--border);border-radius:3px;overflow:hidden">
+        <div style="width:${pct.toFixed(1)}%;height:100%;background:${color};border-radius:3px;transition:width .5s"></div>
+      </div>
+      <span style="font-size:11px;color:var(--muted)">${formatBytes(used)} / 10MB</span>
+      ${pct > 80 ? '<span style="font-size:11px;color:var(--rust);font-weight:700">⚠️ 용량 부족</span>' : ''}
+    </div>
+  `;
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// 집필기 폰트 크기 조절
+// ═══════════════════════════════════════════════════════════
+let editorFontSize = parseInt(localStorage.getItem('wnstudio_fontsize') || '16');
+
+function applyEditorFontSize() {
+  document.documentElement.style.setProperty('--editor-font-size', editorFontSize + 'px');
+  const display = document.getElementById('font-size-display');
+  if (display) display.textContent = editorFontSize + 'px';
+}
+
+function changeFontSize(delta) {
+  editorFontSize = Math.min(28, Math.max(12, editorFontSize + delta));
+  localStorage.setItem('wnstudio_fontsize', editorFontSize);
+  applyEditorFontSize();
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+loadFromStorage();
+initDarkMode();
+applyEditorFontSize();
+renderHome();
+
+// PWA Service Worker 등록
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => {
+        // 백그라운드에서 조용히 업데이트만 (새로고침 없음)
+        reg.addEventListener('updatefound', () => {
+          const newSW = reg.installing;
+          newSW.addEventListener('statechange', () => {
+            if (newSW.state === 'installed') {
+              newSW.postMessage({type: 'SKIP_WAITING'});
+            }
+          });
+        });
+        setInterval(() => reg.update(), 60000);
+      })
+      .catch(e => console.log('SW failed', e));
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// 종료 전 백업 알림
+// ═══════════════════════════════════════════════════════════════
+const BACKUP_KEY = 'wnstudio_last_backup';
+
+function getLastBackupTime() {
+  return localStorage.getItem(BACKUP_KEY) ? new Date(localStorage.getItem(BACKUP_KEY)) : null;
+}
+function setLastBackupTime() {
+  localStorage.setItem(BACKUP_KEY, new Date().toISOString());
+}
+
+// 백업 알림 배너 표시
+function showBackupBanner() {
+  if (document.getElementById('backup-banner')) return;
+  const last = getLastBackupTime();
+  const lastText = last
+    ? `마지막 백업: ${last.toLocaleDateString('ko-KR')} ${last.toLocaleTimeString('ko-KR', {hour:'2-digit',minute:'2-digit'})}`
+    : '아직 백업한 적 없어요';
+
+  const banner = document.createElement('div');
+  banner.id = 'backup-banner';
+  banner.style.cssText = `
+    position:fixed;bottom:0;left:0;right:0;z-index:9000;
+    background:#18120a;color:#fff;padding:14px 20px;
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+    box-shadow:0 -4px 20px rgba(0,0,0,.3);
+    animation:slideUpBanner .3s ease;
+  `;
+  banner.innerHTML = `
+    <style>@keyframes slideUpBanner{from{transform:translateY(100%)}to{transform:translateY(0)}}</style>
+    <span style="font-size:18px">💾</span>
+    <div style="flex:1;min-width:200px">
+      <div style="font-weight:700;font-size:14px;margin-bottom:2px">앱을 닫기 전에 백업하시겠어요?</div>
+      <div style="font-size:12px;color:rgba(255,255,255,.6)">${lastText}</div>
+    </div>
+    <button onclick="backupAllAndClose()" style="
+      background:var(--gold);color:#fff;border:none;border-radius:8px;
+      padding:9px 18px;font-size:13px;font-weight:700;cursor:pointer;
+      font-family:'Noto Sans KR',sans-serif;white-space:nowrap;
+    ">전체 백업 후 닫기</button>
+    <button onclick="exportData();setLastBackupTime();dismissBackupBanner();" style="
+      background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:8px;
+      padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;
+      font-family:'Noto Sans KR',sans-serif;white-space:nowrap;
+    ">현재 작품만 백업</button>
+    <button onclick="dismissBackupBanner()" style="
+      background:transparent;color:rgba(255,255,255,.5);border:none;
+      border-radius:8px;padding:9px 12px;font-size:13px;cursor:pointer;
+      font-family:'Noto Sans KR',sans-serif;white-space:nowrap;
+    ">나중에</button>
+  `;
+  document.body.appendChild(banner);
+}
+
+function dismissBackupBanner() {
+  const b = document.getElementById('backup-banner');
+  if (b) b.remove();
+}
+
+// 전체 작품 백업 (모든 작품을 하나의 JSON으로)
+function backupAllAndClose() {
+  const blob = new Blob([JSON.stringify(state.projects, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = '웹소설스튜디오_전체백업_' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+  setLastBackupTime();
+  dismissBackupBanner();
+  toast('전체 백업 완료! 📁');
+}
+
+// exportData도 백업 시간 기록하도록 오버라이드
+const _origExport = exportData;
+exportData = function() {
+  _origExport();
+  setLastBackupTime();
+};
+
+// beforeunload 제거 (PWA에서 오동작)
+
+// 페이지 숨김(탭 전환, 홈 버튼 등) 감지 → 배너 표시
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') {
+    if (state.projects.length === 0) return;
+    const last = getLastBackupTime();
+    const now = new Date();
+    const hoursSince = last ? (now - last) / 1000 / 60 / 60 : 999;
+    if (hoursSince > 1) {
+      // 다시 돌아왔을 때 배너 표시
+      document.addEventListener('visibilitychange', function showOnReturn() {
+        if (document.visibilityState === 'visible') {
+          showBackupBanner();
+          document.removeEventListener('visibilitychange', showOnReturn);
+        }
+      });
+    }
+  }
 });
+</script>
+</body>
+</html>
