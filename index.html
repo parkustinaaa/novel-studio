@@ -3831,12 +3831,15 @@ async function fsConnect() {
       const file = await handle.getFile();
       const text = await file.text();
       const data = JSON.parse(text);
-      if (data.projects) {
-        state = data;
+      const projects = data.projects || (Array.isArray(data) ? data : null);
+      if (projects) {
+        state.projects = projects;
         saveToStorage();
         await saveFsHandle(handle);
         renderHome();
-        toast('✓ 파일을 불러왔어요!');
+        toast('✓ 파일을 불러왔어요! (' + projects.length + '개 작품)');
+      } else {
+        toast('⚠️ 올바른 웹소설 스튜디오 파일이 아니에요.');
       }
     } else {
       fsFileHandle = await window.showSaveFilePicker({
@@ -3859,8 +3862,9 @@ async function fsConnect() {
 async function fsSave() {
   if (!fsFileHandle) return false;
   try {
+    const data = { projects: state.projects, version: '2.0', savedAt: new Date().toISOString() };
     const writable = await fsFileHandle.createWritable();
-    await writable.write(JSON.stringify(state, null, 2));
+    await writable.write(JSON.stringify(data, null, 2));
     await writable.close();
     return true;
   } catch (e) {
