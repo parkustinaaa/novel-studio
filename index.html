@@ -1184,7 +1184,10 @@ function saveWorld(idx) {
   const p = getProject();
   if (idx !== undefined) p.worldSettings[idx] = w;
   else p.worldSettings.push(w);
-  autoSave(); closeModal(); renderWorld();
+  autoSave(); closeModal();
+  const _sp = document.getElementById('split-panel');
+  const _inSp = _sp && !_sp.classList.contains('hidden') && splitTab === 'world';
+  if (_inSp) { renderSplitContent(); } else { renderWorld(); }
 }
 function deleteWorld(idx) {
   confirmDialog('이 세계관 설정을 삭제합니다.', () => {
