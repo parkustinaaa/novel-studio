@@ -635,30 +635,37 @@ function importData(e) {
   reader.onload = (ev) => {
     try {
       const data = JSON.parse(ev.target.result);
-      // 전체 백업 (배열) 처리
-      if (Array.isArray(data)) {
-        if (!confirm(`전체 백업 파일입니다. 작품 ${data.length}개를 불러올까요?\n(같은 ID의 작품은 덮어씁니다)`)) return;
-        data.forEach(p => {
-          if (!p.id) p.id = Date.now() + Math.random();
+
+      // 빈 작품 필터 함수
+      function filterEmpty(projects) {
+        return projects.filter(p =>
+          (p.title && p.title.trim() && p.title !== '제목 없음') ||
+          (p.chapters && p.chapters.some(c => c.content && c.content.trim())) ||
+          (p.characters && p.characters.length > 0)
+        );
+      }
+
+      // 전체 백업 (배열 또는 {projects:[]}) 처리
+      const projects = Array.isArray(data) ? data : (data.projects || null);
+      if (projects) {
+        const cleaned = filterEmpty(projects);
+        const removed = projects.length - cleaned.length;
+        cleaned.forEach(p => {
+          if (!p.id) p.id = uid();
           const idx = state.projects.findIndex(x => x.id === p.id);
           if (idx >= 0) state.projects[idx] = p;
           else state.projects.push(p);
         });
         saveToStorage();
-        toast(`전체 백업 불러오기 완료! (${data.length}개) 📖`);
         renderHome();
+        toast('불러오기 완료! ' + cleaned.length + '개 작품' + (removed > 0 ? ' (빈 작품 ' + removed + '개 제외)' : '') + ' 📖');
         return;
       }
       // 단일 작품 처리
-      if (!data.id) data.id = Date.now();
+      if (!data.id) data.id = uid();
       const exists = state.projects.findIndex(p => p.id === data.id);
-      if (exists >= 0) {
-        if (confirm('같은 ID의 작품이 있습니다. 덮어쓸까요?')) {
-          state.projects[exists] = data;
-        }
-      } else {
-        state.projects.push(data);
-      }
+      if (exists >= 0) state.projects[exists] = data;
+      else state.projects.push(data);
       saveToStorage();
       toast('불러오기 완료! 📖');
       renderHome();
@@ -859,6 +866,17 @@ function renderHome() {
       ${cards}
     </div>`;
   setTimeout(renderStorageIndicator, 0);
+  // 빈 작품 자동 감지 알림
+  const emptyProjects = state.projects.filter(p =>
+    (!p.title || p.title === '제목 없음') &&
+    (!p.chapters || p.chapters.every(c => !c.content || !c.content.trim())) &&
+    (!p.characters || p.characters.length === 0)
+  );
+  if (emptyProjects.length > 0) {
+    setTimeout(() => {
+      toast('⚠️ 빈 작품 ' + emptyProjects.length + '개 발견! 홈 화면에서 삭제해주세요.');
+    }, 500);
+  }
 }
 
 function deleteProject(id) {
