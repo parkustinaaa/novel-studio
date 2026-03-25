@@ -46,10 +46,13 @@
 [data-theme="dark"] .sym-btn { background:var(--cream) !important; color:var(--ink) !important; }
 [data-theme="dark"] #shortcut-bar { background:var(--cream) !important; }
 [data-theme="dark"] .diagram-canvas-wrap { background:var(--paper) !important; background-image:radial-gradient(circle,var(--border) 1px,transparent 1px) !important; }
+[data-theme="dark"] .memo-card { background:revert !important; }
 [data-theme="dark"] .memo-card,
 [data-theme="dark"] .memo-card *,
 [data-theme="dark"] .memo-card textarea,
 [data-theme="dark"] .memo-card input { color:#1a1208 !important; }
+[data-theme="dark"] .memo-card-header { background:revert !important; }
+[data-theme="dark"] .memo-card-body textarea { background:transparent !important; }
 [data-theme="dark"] .project-card { background:var(--white) !important; border-color:var(--border) !important; }
 html,body{height:100%;overflow:hidden;background:var(--paper);color:var(--ink);
   font-family:'Noto Sans KR',sans-serif;font-size:14px;-webkit-tap-highlight-color:transparent}
@@ -321,7 +324,7 @@ button{cursor:pointer;font-family:'Noto Sans KR',sans-serif;border:none;border-r
 
 /* ═══ MEMO ═══════════════════════════════════════════════════ */
 .memo-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px}
-.memo-card{background:var(--white);border:1.5px solid var(--border);border-radius:10px;
+.memo-card{border:1.5px solid var(--border);border-radius:10px;
   padding:0;overflow:hidden;box-shadow:0 2px 8px var(--shadow);color:#1a1208 !important;
   display:flex;flex-direction:column;transition:box-shadow .15s}
 .memo-card:hover{box-shadow:0 4px 16px var(--shadow)}
@@ -2625,7 +2628,7 @@ function renderMemoCard(m, i) {
   const col = MEMO_COLORS.find(c=>c.bg===m.color) || MEMO_COLORS[0];
   return `
     <div class="memo-card" style="background:${col.bg};border-color:${col.border}">
-      <div class="memo-card-header" style="border-color:${col.border}">
+      <div class="memo-card-header" style="border-color:${col.border};background:${col.bg}">
         <input class="memo-card-title" value="${esc(m.title||'')}"
           oninput="updateMemo(${i},'title',this.value)" placeholder="제목">
         <div style="display:flex;align-items:center;gap:6px">
@@ -3476,29 +3479,46 @@ function renderSplitContent() {
 
   } else if (splitTab === 'memo') {
     const memos = p.memos || [];
-    const memoColors = ['#fff8e1','#e8f5e9','#e3f2fd','#fce4ec','#f3e5f5','#fff3e0','#e0f7fa'];
+    // 색상 팔레트 (MEMO_COLORS와 동일)
+    const splitMemoColors = MEMO_COLORS.length ? MEMO_COLORS : [
+      {bg:'#fff8e1',border:'#f5d76e'},{bg:'#e8f5e9',border:'#81c784'},
+      {bg:'#e3f2fd',border:'#64b5f6'},{bg:'#fce4ec',border:'#f48fb1'},
+      {bg:'#f3e5f5',border:'#ce93d8'},{bg:'#fff3e0',border:'#ffb74d'},
+      {bg:'#e0f7fa',border:'#4dd0e1'}
+    ];
     el.innerHTML = `
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
-        ${memoColors.map(c=>`
-          <button onclick="addMemo('${c}')"
-            style="width:28px;height:28px;border-radius:50%;background:${c};
-              border:2px solid rgba(0,0,0,.1);cursor:pointer;flex-shrink:0"
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
+        ${splitMemoColors.map(c=>`
+          <button onclick="addMemo('${c.bg}')"
+            style="width:28px;height:28px;border-radius:50%;background:${c.bg};
+              border:2px solid ${c.border};cursor:pointer;flex-shrink:0"
             title="메모 추가"></button>`).join('')}
-        <span style="font-size:11px;color:var(--muted);align-self:center;margin-left:4px">색상 선택 후 탭하면 추가</span>
+        <span style="font-size:11px;color:var(--muted);margin-left:2px">탭하면 추가</span>
       </div>
       ${memos.length === 0
-        ? '<div style="color:var(--muted);text-align:center;padding:20px;font-size:13px">＋ 위 색상을 탭해서 메모를 추가하세요</div>'
-        : memos.map((m,i) => `
-          <div style="margin-bottom:10px;border-radius:10px;overflow:hidden;border:1px solid rgba(0,0,0,.1)">
-            <textarea oninput="updateSplitMemo(${i},this.value)" rows="4"
-              placeholder="메모를 입력하세요..."
-              style="width:100%;padding:10px 12px;font-size:13px;line-height:1.7;
-                background:${m.color||'#fff8e1'};border:none;outline:none;resize:vertical;
-                font-family:'Noto Serif KR',serif;color:#1a1208">${esc(m.text||'')}</textarea>
-            <div style="display:flex;justify-content:flex-end;padding:4px 8px;background:${m.color||'#fff8e1'}">
-              <button onclick="deleteSplitMemo(${i})" style="background:none;border:none;cursor:pointer;font-size:11px;color:rgba(0,0,0,.4)">🗑️ 삭제</button>
-            </div>
-          </div>`).join('')}
+        ? '<div style="color:var(--muted);text-align:center;padding:20px;font-size:13px">위 색상을 탭해서 메모를 추가하세요</div>'
+        : memos.map((m,i) => {
+            const col = splitMemoColors.find(c=>c.bg===m.color) || splitMemoColors[0];
+            return `
+              <div style="border-radius:10px;overflow:hidden;border:1.5px solid ${col.border};margin-bottom:12px;box-shadow:0 2px 6px rgba(0,0,0,.08)">
+                <div style="padding:8px 12px 4px;background:${col.bg};display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid ${col.border}">
+                  <input value="${esc(m.title||'')}" oninput="updateSplitMemoTitle(${i},this.value)"
+                    placeholder="제목"
+                    style="border:none;outline:none;background:transparent;font-weight:700;
+                      font-size:13px;color:#1a1208;width:calc(100% - 30px)">
+                  <button onclick="deleteSplitMemo(${i})"
+                    style="background:none;border:none;cursor:pointer;font-size:14px;color:rgba(0,0,0,.35);flex-shrink:0">🗑</button>
+                </div>
+                <textarea oninput="updateSplitMemo(${i},this.value)" rows="4"
+                  placeholder="자유롭게 메모하세요..."
+                  style="width:100%;padding:10px 12px;font-size:13px;line-height:1.7;
+                    background:${col.bg};border:none;outline:none;resize:vertical;
+                    font-family:'Noto Serif KR',serif;color:#1a1208">${esc(m.text||'')}</textarea>
+                <div style="padding:4px 12px 6px;background:${col.bg};font-size:10px;color:rgba(0,0,0,.4);text-align:right">
+                  ${m.date ? new Date(m.date).toLocaleDateString('ko-KR') : ''}
+                </div>
+              </div>`;
+          }).join('')}
     `;
   }
 }
@@ -3516,6 +3536,13 @@ function updateSplitMemo(idx, val) {
   const p = getProject();
   if (!p || !p.memos) return;
   p.memos[idx].text = val;
+  autoSave();
+}
+
+function updateSplitMemoTitle(idx, val) {
+  const p = getProject();
+  if (!p || !p.memos) return;
+  p.memos[idx].title = val;
   autoSave();
 }
 
