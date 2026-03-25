@@ -1,4 +1,5 @@
-const CACHE = 'wnstudio-1774407269';
+// wnstudio sw.js - updated: 1774408466
+const CACHE = 'wnstudio-1774408466';
 
 self.addEventListener('install', e => {
   e.waitUntil(
@@ -10,6 +11,7 @@ self.addEventListener('install', e => {
 });
 
 self.addEventListener('activate', e => {
+  // 이전 캐시 전부 삭제
   e.waitUntil(
     caches.keys().then(keys =>
       Promise.all(keys.map(k => caches.delete(k)))
@@ -20,6 +22,7 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  // 네트워크 우선 전략
   e.respondWith(
     fetch(e.request)
       .then(res => {
