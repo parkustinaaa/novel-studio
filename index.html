@@ -472,7 +472,7 @@ button{cursor:pointer;font-family:'Noto Sans KR',sans-serif;border:none;border-r
 <div id="app">
   <!-- HEADER -->
   <header id="header">
-    <button id="header-title" onclick="goHome()">웹소설 스튜디오 <span style="font-size:10px;font-weight:400;color:var(--gold2);letter-spacing:.5px;margin-left:2px">v0.2.5</span></button>
+    <button id="header-title" onclick="goHome()">웹소설 스튜디오 <span style="font-size:10px;font-weight:400;color:var(--gold2);letter-spacing:.5px;margin-left:2px">v0.2.6</span></button>
     <button class="header-btn" id="menu-toggle" onclick="toggleSidebar()" style="display:none;padding:6px 8px">
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
         <!-- 왼쪽 세로선 -->
@@ -3696,7 +3696,8 @@ function renderSplitContent() {
             onclick="toggleSplitFamily(${fi})">
             <div>
               <span style="font-weight:700;font-size:13px">${esc(f.name)}</span>
-              ${f.rank?`<span style="font-size:10px;color:var(--muted);margin-left:6px">${esc(f.rank)}</span>`:''}
+              ${f.groupSub?`<span style="font-size:10px;background:var(--teal-light);color:var(--teal);padding:1px 6px;border-radius:10px;margin-left:4px">${esc(f.groupSub)}</span>`:''}
+              ${f.rank?`<span style="font-size:10px;color:var(--muted);margin-left:4px">${esc(f.rank)}</span>`:''}
               <span style="font-size:10px;color:var(--muted);margin-left:6px">${(f.members||[]).length}명</span>
             </div>
             <span style="font-size:11px;color:var(--muted);transform:rotate(${collapsed?'-90':'0'}deg);display:inline-block;transition:transform .2s">▾</span>
@@ -3972,6 +3973,44 @@ let splitFamilyCollapsed = {};
 function toggleSplitFamily(idx) {
   splitFamilyCollapsed['f'+idx] = !splitFamilyCollapsed['f'+idx];
   renderSplitContent();
+}
+
+
+function updateFmSubs(typeId, curSub) {
+  const FM_TYPES = [
+    {id:'family', subs:['직계','방계','사용인','동맹 가문','외척']},
+    {id:'guild', subs:['마법사 길드','전사 길드','도적 길드','상인 길드','탐험가 길드','제작자 길드','연금술사 길드']},
+    {id:'knight', subs:['근위대','원정대','용병단','반란군','저항군','혁명군','정규군','성기사단']},
+    {id:'crime_f', subs:['마피아','도적단','암살단','밀수단','지하조직','비밀결사','사기단']},
+    {id:'religion', subs:['교단','신전','이단','수도회','예언자 집단','사교단','성직자회']},
+    {id:'academic', subs:['마법학회','연구소','학파','현자 집단','탐구회','마도연구원']},
+    {id:'politics', subs:['왕당파','귀족파벌','혁명파','의회파','황실','원로원','추밀원']},
+    {id:'corp', subs:['대기업','중소기업','스타트업','NGO','정부기관','공기업','재단','로펌']},
+    {id:'school', subs:['초중고등학교','대학교','대학원','연구소','싱크탱크','학원','연구팀']},
+    {id:'crime_m', subs:['갱단','카르텔','마약조직','해커 집단','테러 조직','조폭','사이비 종교','사기 집단']},
+    {id:'media', subs:['방송국','언론사','연예기획사','스포츠팀','광고회사','출판사','영화사']},
+    {id:'military', subs:['군대','특수부대','경찰서','정보기관','용병 회사','민간군사기업','자경단']},
+    {id:'politics_m', subs:['정당','시민단체','압력단체','로비단체','지하운동','혁명조직','의회파벌']},
+    {id:'other', subs:['동호회','동아리','모험가 파티','용사 일행','온라인 커뮤니티','비공개 모임','기타 집단']},
+  ];
+  const sel = document.getElementById('fm-sub');
+  if (!sel) return;
+  const subs = (FM_TYPES.find(t=>t.id===typeId)||FM_TYPES[0]).subs;
+  sel.innerHTML = subs.map(s=>`<option value="${s}" ${curSub===s?'selected':''}>${s}</option>`).join('');
+}
+
+
+let familyCollapsed = {};
+function toggleFamilyCard(fi) {
+  familyCollapsed['f'+fi] = !familyCollapsed['f'+fi];
+  renderFamily();
+}
+
+
+let familyMemberCollapsed = {};
+function toggleFamilyMembers(fi) {
+  familyMemberCollapsed['f'+fi] = !familyMemberCollapsed['f'+fi];
+  renderFamily();
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -4371,8 +4410,9 @@ function renderFamily() {
     : families.map((f, fi) => `
       <div class="card" style="margin-bottom:16px;border-left:4px solid ${f.color||'var(--gold)'}">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-          <div style="display:flex;align-items:center;gap:10px">
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
             <span class="font-display" style="font-size:18px">${esc(f.name)}</span>
+            ${f.groupSub?`<span class="tag" style="background:var(--teal-light);color:var(--teal);border-color:var(--teal)">${esc(f.groupSub)}</span>`:''}
             ${f.rank?`<span class="tag">${esc(f.rank)}</span>`:''}
           </div>
           <div style="display:flex;gap:6px">
@@ -4420,14 +4460,42 @@ function showFamilyModal(idx) {
   const p = getProject();
   const f = idx !== undefined ? (p.families||[])[idx] : {};
   const FAMILY_COLORS = ['#c4922a','#e53935','#1e88e5','#43a047','#8e24aa','#546e7a','#e64a19','#00897b'];
+  const FM_TYPES_MODAL = [
+    {id:'family', label:'가문', subs:['직계','방계','사용인','동맹 가문','외척']},
+    {id:'guild', label:'길드 (판타지)', subs:['마법사 길드','전사 길드','도적 길드','상인 길드','탐험가 길드','제작자 길드','연금술사 길드']},
+    {id:'knight', label:'기사단/군사 (판타지)', subs:['근위대','원정대','용병단','반란군','저항군','혁명군','정규군','성기사단']},
+    {id:'crime_f', label:'범죄조직 (판타지)', subs:['마피아','도적단','암살단','밀수단','지하조직','비밀결사','사기단']},
+    {id:'religion', label:'종교/신앙', subs:['교단','신전','이단','수도회','예언자 집단','사교단','성직자회']},
+    {id:'academic', label:'학계/연구 (판타지)', subs:['마법학회','연구소','학파','현자 집단','탐구회','마도연구원']},
+    {id:'politics', label:'정치/파벌 (판타지)', subs:['왕당파','귀족파벌','혁명파','의회파','황실','원로원','추밀원']},
+    {id:'corp', label:'기업/조직 (현대)', subs:['대기업','중소기업','스타트업','NGO','정부기관','공기업','재단','로펌']},
+    {id:'school', label:'학교/연구 (현대)', subs:['초중고등학교','대학교','대학원','연구소','싱크탱크','학원','연구팀']},
+    {id:'crime_m', label:'범죄조직 (현대)', subs:['갱단','카르텔','마약조직','해커 집단','테러 조직','조폭','사이비 종교','사기 집단']},
+    {id:'media', label:'미디어/문화 (현대)', subs:['방송국','언론사','연예기획사','스포츠팀','광고회사','출판사','영화사']},
+    {id:'military', label:'군사/경찰 (현대)', subs:['군대','특수부대','경찰서','정보기관','용병 회사','민간군사기업','자경단']},
+    {id:'politics_m', label:'정치/파벌 (현대)', subs:['정당','시민단체','압력단체','로비단체','지하운동','혁명조직','의회파벌']},
+    {id:'other', label:'기타', subs:['동호회','동아리','모험가 파티','용사 일행','온라인 커뮤니티','비공개 모임','기타 집단']},
+  ];
+  const curType = f.groupType || 'family';
+  const curSub = f.groupSub || '';
+  const curTypeSubs = (FM_TYPES_MODAL.find(t=>t.id===curType)||FM_TYPES_MODAL[0]).subs;
   showModal(`
-    <div class="modal-title">${idx!==undefined?'가문 수정':'가문 및 집단 추가'}</div>
+    <div class="modal-title">${idx!==undefined?'가문 및 집단 수정':'가문 및 집단 추가'}</div>
     <div style="margin-bottom:12px"><label class="label">이름 *</label>
       <input id="fm-name" value="${esc(f.name||'')}" placeholder="예: 아르켄 가문, 용사 파티, 상인 길드"></div>
+    <div style="margin-bottom:12px">
+      <label class="label">유형</label>
+      <select id="fm-type" onchange="updateFmSubs(this.value,'')" style="width:100%;margin-bottom:6px">
+        ${FM_TYPES_MODAL.map(t=>`<option value="${t.id}" ${curType===t.id?'selected':''}>${t.label}</option>`).join('')}
+      </select>
+      <select id="fm-sub" style="width:100%">
+        ${curTypeSubs.map(s=>`<option value="${s}" ${curSub===s?'selected':''}>${s}</option>`).join('')}
+      </select>
+    </div>
     <div style="margin-bottom:12px"><label class="label">등급/직위</label>
-      <input id="fm-rank" value="${esc(f.rank||'')}" placeholder="예: 공작가, 기사단, 상인 길드"></div>
+      <input id="fm-rank" value="${esc(f.rank||'')}" placeholder="예: 공작가, 1등급, 최상위"></div>
     <div style="margin-bottom:14px"><label class="label">설명</label>
-      <textarea id="fm-desc" rows="3" placeholder="가문의 역사, 특징, 가훈 등">${esc(f.description||'')}</textarea></div>
+      <textarea id="fm-desc" rows="3" placeholder="역사, 특징, 가훈, 목표 등">${esc(f.description||'')}</textarea></div>
     <div style="margin-bottom:20px">
       <label class="label">가문 색상</label>
       <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px" id="fm-color-group">
@@ -4454,6 +4522,8 @@ function saveFamily(idx) {
   const f = {
     id: idx!==undefined ? p.families[idx].id : uid(),
     name,
+    groupType: document.getElementById('fm-type')?.value || 'family',
+    groupSub: document.getElementById('fm-sub')?.value || '',
     rank: document.getElementById('fm-rank').value,
     description: document.getElementById('fm-desc').value,
     color: document.querySelector('#fm-color-group [data-selected]')?.dataset?.val || '#c4922a',
