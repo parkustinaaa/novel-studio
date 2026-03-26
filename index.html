@@ -3878,6 +3878,15 @@ function toggleCharGroup(groupName) {
   renderCharacters();
 }
 
+
+// 참고 패널 캐릭터 카드 접기 상태
+let splitCharCollapsed = {};
+
+function toggleSplitChar(idx) {
+  splitCharCollapsed['c'+idx] = !splitCharCollapsed['c'+idx];
+  renderSplitContent();
+}
+
 // ═══════════════════════════════════════════════════════════════
 // MODAL SYSTEM
 // ═══════════════════════════════════════════════════════════════
