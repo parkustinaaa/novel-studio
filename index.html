@@ -472,7 +472,7 @@ button{cursor:pointer;font-family:'Noto Sans KR',sans-serif;border:none;border-r
 <div id="app">
   <!-- HEADER -->
   <header id="header">
-    <button id="header-title" onclick="goHome()">웹소설 스튜디오 <span style="font-size:10px;font-weight:400;color:var(--gold2);letter-spacing:.5px;margin-left:2px">v0.2.6</span></button>
+    <button id="header-title" onclick="goHome()">웹소설 스튜디오 <span style="font-size:10px;font-weight:400;color:var(--gold2);letter-spacing:.5px;margin-left:2px">v0.2.7</span></button>
     <button class="header-btn" id="menu-toggle" onclick="toggleSidebar()" style="display:none;padding:6px 8px">
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
         <!-- 왼쪽 세로선 -->
@@ -4013,6 +4013,37 @@ function toggleFamilyMembers(fi) {
   renderFamily();
 }
 
+
+// 구성원 드래그 순서 변경
+let _memberDragFi = null, _memberDragMi = null;
+
+function memberDragStart(e, fi, mi) {
+  _memberDragFi = fi; _memberDragMi = mi;
+  e.dataTransfer.effectAllowed = 'move';
+  e.currentTarget.style.opacity = '0.4';
+}
+function memberDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  e.currentTarget.style.background = 'var(--gold-light)';
+}
+function memberDrop(e, fi, mi) {
+  e.preventDefault();
+  e.currentTarget.style.background = '';
+  if (_memberDragFi !== fi || _memberDragMi === mi) return;
+  const p = getProject();
+  const members = p.families[fi].members;
+  const dragged = members.splice(_memberDragMi, 1)[0];
+  members.splice(mi, 0, dragged);
+  autoSave(); renderFamily();
+}
+function memberDragEnd(e) {
+  e.currentTarget.style.opacity = '';
+  document.querySelectorAll('[id^="member-list-"]').forEach(el => {
+    el.querySelectorAll('div').forEach(d => d.style.background = '');
+  });
+}
+
 // ═══════════════════════════════════════════════════════════════
 // MODAL SYSTEM
 // ═══════════════════════════════════════════════════════════════
@@ -4425,18 +4456,29 @@ function renderFamily() {
         ${f.description?`<div style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.7">${esc(f.description)}</div>`:''}
         ${f.members&&f.members.length>0?`
           <div style="border-top:1px solid var(--border);padding-top:10px">
-            <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px;margin-bottom:8px">구성원</div>
-            <div style="display:flex;flex-direction:column;gap:4px">
+            <div style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:8px;user-select:none"
+              onclick="toggleFamilyMembers(${fi})">
+              <span style="font-size:10px;color:var(--muted);display:inline-block;transition:transform .2s;transform:rotate(${familyMemberCollapsed['f'+fi]?'-90':'0'}deg)">▾</span>
+              <span style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px">구성원 (${f.members.length}명)</span>
+            </div>
+            ${familyMemberCollapsed['f'+fi]?'':`
+            <div style="display:flex;flex-direction:column;gap:4px" id="member-list-${fi}">
               ${f.members.map((m,mi)=>`
-                <div style="display:flex;align-items:center;gap:10px;padding:6px 10px;background:var(--cream);border-radius:8px">
+                <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--cream);border-radius:8px"
+                  draggable="true"
+                  ondragstart="memberDragStart(event,${fi},${mi})"
+                  ondragover="memberDragOver(event)"
+                  ondrop="memberDrop(event,${fi},${mi})"
+                  ondragend="memberDragEnd(event)">
+                  <span style="color:var(--muted);cursor:grab;font-size:14px;flex-shrink:0">⠿</span>
                   <div style="flex:1">
                     <span style="font-weight:600;font-size:13px">${esc(m.name)}</span>
                     ${m.relation?`<span style="font-size:11px;color:var(--muted);margin-left:6px">${esc(m.relation)}</span>`:''}
                   </div>
                   ${m.note?`<span style="font-size:11px;color:var(--muted)">${esc(m.note)}</span>`:''}
-                  <button onclick="deleteFamilyMember(${fi},${mi})" style="background:none;border:none;cursor:pointer;color:var(--rust);font-size:14px;width:24px;height:24px">×</button>
+                  <button onclick="deleteFamilyMember(${fi},${mi})" style="background:none;border:none;cursor:pointer;color:var(--rust);font-size:14px;width:24px;height:24px;flex-shrink:0">×</button>
                 </div>`).join('')}
-            </div>
+            </div>`}
           </div>`:''}
         <button class="btn btn-outline btn-sm" style="margin-top:10px;width:100%;justify-content:center"
           onclick="showAddMemberModal(${fi})">＋ 구성원 추가</button>
