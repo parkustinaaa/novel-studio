@@ -1113,6 +1113,7 @@ function renderCharacters() {
 
   document.getElementById('main').innerHTML = html;
   updateBadges();
+  setTimeout(initMemberDrag, 50);
 }
 
 
@@ -4014,34 +4015,118 @@ function toggleFamilyMembers(fi) {
 }
 
 
-// 구성원 드래그 순서 변경
-let _memberDragFi = null, _memberDragMi = null;
+// 구성원 순서 변경 (터치 드래그)
+let _mDrag = null; // {fi, mi, el, ghost, startY, listEl}
 
-function memberDragStart(e, fi, mi) {
-  _memberDragFi = fi; _memberDragMi = mi;
-  e.dataTransfer.effectAllowed = 'move';
-  e.currentTarget.style.opacity = '0.4';
-}
-function memberDragOver(e) {
-  e.preventDefault();
-  e.dataTransfer.dropEffect = 'move';
-  e.currentTarget.style.background = 'var(--gold-light)';
-}
-function memberDrop(e, fi, mi) {
-  e.preventDefault();
-  e.currentTarget.style.background = '';
-  if (_memberDragFi !== fi || _memberDragMi === mi) return;
-  const p = getProject();
-  const members = p.families[fi].members;
-  const dragged = members.splice(_memberDragMi, 1)[0];
-  members.splice(mi, 0, dragged);
-  autoSave(); renderFamily();
-}
-function memberDragEnd(e) {
-  e.currentTarget.style.opacity = '';
-  document.querySelectorAll('[id^="member-list-"]').forEach(el => {
-    el.querySelectorAll('div').forEach(d => d.style.background = '');
+function initMemberDrag() {
+  document.querySelectorAll('.member-handle').forEach(handle => {
+    handle.addEventListener('touchstart', memberTouchStart, {passive: false});
+    handle.addEventListener('mousedown', memberMouseStart);
   });
+}
+
+function memberTouchStart(e) {
+  e.preventDefault();
+  const t = e.touches[0];
+  memberDragInit(e.currentTarget, t.clientX, t.clientY);
+  document.addEventListener('touchmove', memberTouchMove, {passive: false});
+  document.addEventListener('touchend', memberTouchEnd, {once: true});
+}
+
+function memberMouseStart(e) {
+  memberDragInit(e.currentTarget, e.clientX, e.clientY);
+  document.addEventListener('mousemove', memberMouseMove);
+  document.addEventListener('mouseup', memberMouseEnd, {once: true});
+}
+
+function memberDragInit(handle, x, y) {
+  const fi = +handle.dataset.fi;
+  const mi = +handle.dataset.mi;
+  const row = handle.closest('.member-row');
+  const listEl = row.parentElement;
+  const rect = row.getBoundingClientRect();
+
+  // 고스트 - 이름만 보이는 심플한 형태
+  const memberName = row.querySelector('span[style*="font-weight:600"]')?.textContent || '';
+  const ghost = document.createElement('div');
+  ghost.style.cssText = `position:fixed;left:${rect.left}px;top:${rect.top}px;
+    width:${rect.width}px;height:${rect.height}px;z-index:9999;pointer-events:none;
+    box-shadow:0 4px 16px rgba(0,0,0,.2);border-radius:8px;
+    background:var(--gold-light);border:1.5px solid var(--gold);
+    display:flex;align-items:center;padding:0 12px;gap:8px;transition:none`;
+  ghost.innerHTML = `<span style="font-size:18px;color:var(--muted)">⠿</span>
+    <span style="font-weight:600;font-size:13px;color:var(--ink)">${memberName}</span>`;
+  document.body.appendChild(ghost);
+
+  row.style.opacity = '0.3';
+
+  _mDrag = { fi, mi, el: row, ghost, startY: y, offsetY: y - rect.top, listEl };
+}
+
+function memberTouchMove(e) {
+  e.preventDefault();
+  if (!_mDrag) return;
+  memberDragMove(e.touches[0].clientY);
+}
+function memberMouseMove(e) {
+  if (!_mDrag) return;
+  memberDragMove(e.clientY);
+}
+
+function memberDragMove(clientY) {
+  const { ghost, listEl, offsetY } = _mDrag;
+  const listRect = listEl.getBoundingClientRect();
+
+  // 고스트 위치 업데이트 (세로만, 리스트 범위 내 클램핑)
+  const newTop = Math.max(listRect.top, Math.min(clientY - offsetY, listRect.bottom - ghost.offsetHeight));
+  ghost.style.top = newTop + 'px';
+
+  // 드롭 위치 계산
+  const rows = [...listEl.querySelectorAll('.member-row')];
+  rows.forEach(r => r.style.borderTop = '');
+  const midY = clientY;
+  let targetIdx = rows.length;
+  for (let i = 0; i < rows.length; i++) {
+    const r = rows[i];
+    const rRect = r.getBoundingClientRect();
+    if (midY < rRect.top + rRect.height / 2) {
+      targetIdx = i;
+      if (r !== _mDrag.el) r.style.borderTop = '2px solid var(--gold)';
+      break;
+    }
+  }
+  _mDrag.targetIdx = targetIdx;
+}
+
+function memberTouchEnd() {
+  document.removeEventListener('touchmove', memberTouchMove);
+  memberDragCommit();
+}
+function memberMouseEnd() {
+  document.removeEventListener('mousemove', memberMouseMove);
+  memberDragCommit();
+}
+
+function memberDragCommit() {
+  if (!_mDrag) return;
+  const { fi, mi, el, ghost, listEl, targetIdx } = _mDrag;
+  _mDrag = null;
+
+  ghost.remove();
+  el.style.opacity = '';
+  listEl.querySelectorAll('.member-row').forEach(r => r.style.borderTop = '');
+
+  if (targetIdx !== undefined && targetIdx !== mi && targetIdx !== mi + 1) {
+    const p = getProject();
+    const members = p.families[fi].members;
+    const item = members.splice(mi, 1)[0];
+    const insertAt = targetIdx > mi ? targetIdx - 1 : targetIdx;
+    members.splice(insertAt, 0, item);
+    autoSave();
+  }
+  renderFamily();
+  // 드래그 이벤트 재등록
+  setTimeout(initMemberDrag, 50);
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -4464,19 +4549,17 @@ function renderFamily() {
             ${familyMemberCollapsed['f'+fi]?'':`
             <div style="display:flex;flex-direction:column;gap:4px" id="member-list-${fi}">
               ${f.members.map((m,mi)=>`
-                <div style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--cream);border-radius:8px"
-                  draggable="true"
-                  ondragstart="memberDragStart(event,${fi},${mi})"
-                  ondragover="memberDragOver(event)"
-                  ondrop="memberDrop(event,${fi},${mi})"
-                  ondragend="memberDragEnd(event)">
-                  <span style="color:var(--muted);cursor:grab;font-size:14px;flex-shrink:0">⠿</span>
-                  <div style="flex:1">
+                <div class="member-row" data-fi="${fi}" data-mi="${mi}"
+                  style="display:flex;align-items:center;gap:8px;padding:6px 10px;background:var(--cream);border-radius:8px;transition:opacity .15s">
+                  <span class="member-handle" data-fi="${fi}" data-mi="${mi}"
+                    style="color:var(--muted);font-size:18px;flex-shrink:0;cursor:grab;padding:4px;touch-action:none;user-select:none">⠿</span>
+                  <div style="flex:1;min-width:0">
                     <span style="font-weight:600;font-size:13px">${esc(m.name)}</span>
                     ${m.relation?`<span style="font-size:11px;color:var(--muted);margin-left:6px">${esc(m.relation)}</span>`:''}
                   </div>
-                  ${m.note?`<span style="font-size:11px;color:var(--muted)">${esc(m.note)}</span>`:''}
-                  <button onclick="deleteFamilyMember(${fi},${mi})" style="background:none;border:none;cursor:pointer;color:var(--rust);font-size:14px;width:24px;height:24px;flex-shrink:0">×</button>
+                  ${m.note?`<span style="font-size:11px;color:var(--muted);flex-shrink:0">${esc(m.note)}</span>`:''}
+                  <button onclick="showEditMemberModal(${fi},${mi})" style="background:none;border:none;cursor:pointer;color:var(--teal);font-size:13px;width:28px;height:28px;flex-shrink:0">✏️</button>
+                  <button onclick="deleteFamilyMember(${fi},${mi})" style="background:none;border:none;cursor:pointer;color:var(--rust);font-size:14px;width:28px;height:28px;flex-shrink:0">×</button>
                 </div>`).join('')}
             </div>`}
           </div>`:''}
@@ -4496,6 +4579,7 @@ function renderFamily() {
       ${familyCards}
     </div>`;
   updateBadges();
+  setTimeout(initMemberDrag, 100);
 }
 
 function showFamilyModal(idx) {
@@ -4589,7 +4673,7 @@ function showAddMemberModal(fi) {
     <div class="modal-title">구성원 추가</div>
     <div style="margin-bottom:12px"><label class="label">이름 *</label>
       <input id="mb-name" placeholder="예: 아르켄 레온하르트"></div>
-    <div style="margin-bottom:12px"><label class="label">가문 내 관계/직위</label>
+    <div style="margin-bottom:12px"><label class="label">관계/직위</label>
       <input id="mb-relation" placeholder="예: 가주, 장남, 방계 3세"></div>
     <div style="margin-bottom:20px"><label class="label">비고</label>
       <input id="mb-note" placeholder="예: 현재 실종, 마법 능력 보유"></div>
@@ -4598,6 +4682,39 @@ function showAddMemberModal(fi) {
       <button class="btn btn-gold" onclick="saveFamilyMember(${fi})">추가</button>
     </div>`, false);
   setTimeout(()=>document.getElementById('mb-name')?.focus(),100);
+}
+
+function showEditMemberModal(fi, mi) {
+  const p = getProject();
+  const m = p.families[fi].members[mi];
+  if (!m) return;
+  showModal(`
+    <div class="modal-title">구성원 수정</div>
+    <div style="margin-bottom:12px"><label class="label">이름 *</label>
+      <input id="mb-name" value="${esc(m.name||'')}" placeholder="예: 아르켄 레온하르트"></div>
+    <div style="margin-bottom:12px"><label class="label">관계/직위</label>
+      <input id="mb-relation" value="${esc(m.relation||'')}" placeholder="예: 가주, 장남, 방계 3세"></div>
+    <div style="margin-bottom:20px"><label class="label">비고</label>
+      <input id="mb-note" value="${esc(m.note||'')}" placeholder="예: 현재 실종, 마법 능력 보유"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">취소</button>
+      <button class="btn btn-gold" onclick="updateFamilyMember(${fi},${mi})">저장</button>
+    </div>`, false);
+  setTimeout(()=>document.getElementById('mb-name')?.focus(),100);
+}
+
+function updateFamilyMember(fi, mi) {
+  const name = document.getElementById('mb-name').value.trim();
+  if (!name) { toast('이름을 입력해주세요.'); return; }
+  const p = getProject();
+  p.families[fi].members[mi] = {
+    ...p.families[fi].members[mi],
+    name,
+    relation: document.getElementById('mb-relation').value,
+    note: document.getElementById('mb-note').value,
+  };
+  autoSave(); closeModal(); renderFamily();
+  toast('수정했습니다.');
 }
 
 function saveFamilyMember(fi) {
