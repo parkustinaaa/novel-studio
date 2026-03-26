@@ -472,7 +472,7 @@ button{cursor:pointer;font-family:'Noto Sans KR',sans-serif;border:none;border-r
 <div id="app">
   <!-- HEADER -->
   <header id="header">
-    <button id="header-title" onclick="goHome()">웹소설 스튜디오 <span style="font-size:10px;font-weight:400;color:var(--gold2);letter-spacing:.5px;margin-left:2px">v0.2.3</span></button>
+    <button id="header-title" onclick="goHome()">웹소설 스튜디오 <span style="font-size:10px;font-weight:400;color:var(--gold2);letter-spacing:.5px;margin-left:2px">v0.2.5</span></button>
     <button class="header-btn" id="menu-toggle" onclick="toggleSidebar()" style="display:none;padding:6px 8px">
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
         <!-- 왼쪽 세로선 -->
@@ -520,6 +520,10 @@ button{cursor:pointer;font-family:'Noto Sans KR',sans-serif;border:none;border-r
         <button class="nav-item" onclick="navigate('relations')" data-tab="relations">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="3"/><line x1="12" y1="8" x2="12" y2="13"/><circle cx="5" cy="18" r="3"/><circle cx="19" cy="18" r="3"/><line x1="12" y1="13" x2="5" y2="15"/><line x1="12" y1="13" x2="19" y2="15"/></svg>
           인물 관계도
+        </button>
+        <button class="nav-item" onclick="navigate('family')" data-tab="family">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          가문 및 집단
         </button>
         <div class="nav-section">세계관</div>
         <button class="nav-item" onclick="navigate('world')" data-tab="world">
@@ -724,6 +728,7 @@ function navigate(tab) {
     diagram: renderDiagram,
     manuscript: renderManuscript,
     memo: renderMemo,
+    family: renderFamily,
   };
 
   if (renders[tab]) renders[tab]();
@@ -1079,7 +1084,7 @@ function renderCharacters() {
         background:${gc};border-left:3px solid rgba(0,0,0,.15);border-radius:0 8px 8px 0;cursor:pointer"
         onclick="toggleCharGroup('${groupName.replace(/'/g,'\'')}')" >
         <span style="font-size:14px;transition:transform .2s;display:inline-block;transform:rotate(${isCollapsed?'-90':'0'}deg)">▾</span>
-        <span style="font-size:13px;font-weight:700;color:var(--ink)">🏛 ${esc(groupName)}</span>
+        <span style="font-size:13px;font-weight:700;color:var(--ink)">${esc(groupName)}</span>
         <span style="font-size:11px;color:var(--muted)">${members.length}명</span>
         <button onclick="event.stopPropagation();showGroupColorPicker('${groupName}',this)"
           style="margin-left:auto;background:rgba(0,0,0,.08);border:none;border-radius:20px;
@@ -1573,10 +1578,11 @@ function renderEditorContent(ch) {
       <div id="split-panel" class="hidden">
         <div class="split-panel-tabs" id="split-tabs" style="overflow-x:auto;flex-wrap:nowrap">
           <button class="split-tab active" onclick="switchSplitTab('overview')">📋 개요</button>
-          <button class="split-tab" onclick="switchSplitTab('characters')">👤 인물</button>
-          <button class="split-tab" onclick="switchSplitTab('plot')">📐 플롯</button>
           <button class="split-tab" onclick="switchSplitTab('world')">🌍 세계관</button>
-          <button class="split-tab" onclick="switchSplitTab('diagram')">🔗 다이어그램</button>
+          <button class="split-tab" onclick="switchSplitTab('plot')">📐 플롯</button>
+          <button class="split-tab" onclick="switchSplitTab('characters')">👤 인물</button>
+          <button class="split-tab" onclick="switchSplitTab('relations')">🔗 관계도</button>
+          <button class="split-tab" onclick="switchSplitTab('family')">🏰 가문</button>
           <button class="split-tab" onclick="switchSplitTab('memo')">📝 메모</button>
         </div>
         <div class="split-panel-content" id="split-content"></div>
@@ -3555,7 +3561,7 @@ function renderSplitContent() {
                 ${c.age?`<span style="font-size:10px;background:var(--cream);color:var(--muted);padding:1px 7px;border-radius:20px;font-weight:600">${esc(c.age)}세</span>`:''}
                 ${c.alive&&c.alive!=='생존'?`<span style="font-size:10px;background:${c.alive==='사망'?'var(--rust-light)':'var(--cream)'};color:${c.alive==='사망'?'var(--rust)':'var(--muted)'};padding:1px 7px;border-radius:20px;font-weight:600">${esc(c.alive)}</span>`:''}
               </div>
-              ${c.group?`<div style="font-size:10px;color:var(--muted)">🏛 ${esc(c.group)}</div>`:''}
+              ${c.group?`<div style="font-size:10px;color:var(--muted)">${esc(c.group)}</div>`:''}
             </div>
             <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;margin-left:6px">
               <button onclick="event.stopPropagation();showCharModal(${i})"
@@ -3627,34 +3633,88 @@ function renderSplitContent() {
             </div>`).join('')}
         </div>`).join('')}`;
 
-  } else if (splitTab === 'diagram') {
-    const diagrams = p.diagrams || [];
-    if (!diagrams.length) {
-      el.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px">다이어그램이 없어요</div>';
+  } else if (splitTab === 'relations') {
+    const chars = p.characters || [];
+    const rels = p.relations || [];
+    if (!chars.length) {
+      el.innerHTML = '<div style="color:var(--muted);text-align:center;padding:20px;font-size:13px">등장인물을 먼저 추가해주세요</div>';
       return;
     }
-    el.innerHTML = diagrams.map(dg => `
-      <div style="margin-bottom:16px;border:1px solid var(--border);border-radius:10px;overflow:hidden">
-        <div style="padding:8px 12px;background:var(--cream);font-weight:700;font-size:13px;color:var(--gold)">${esc(dg.title||'다이어그램')}</div>
-        <div style="padding:10px 12px">
-          ${(dg.nodes||[]).length === 0 ? '<div style="color:var(--muted);font-size:12px">노드 없음</div>' :
-            (dg.nodes||[]).map(n => `
-              <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px">
-                <span>${(DG_TYPES.find(t=>t.id===n.type)||DG_TYPES[0]).icon}</span>
-                <span style="font-weight:600">${esc(n.label)}</span>
-                ${n.sub ? `<span style="color:var(--muted)">${esc(n.sub)}</span>` : ''}
-              </div>`).join('')}
-          ${(dg.edges||[]).length > 0 ? `
-            <div style="margin-top:8px;font-size:11px;color:var(--muted);font-weight:700">연결 관계</div>
-            ${dg.edges.map(e => {
-              const fn = (dg.nodes||[]).find(n=>n.id===e.from);
-              const tn = (dg.nodes||[]).find(n=>n.id===e.to);
-              if (!fn||!tn) return '';
-              const arrow = e.dir==='both'?'↔':e.dir==='none'?'—':'→';
-              return `<div style="font-size:11px;padding:3px 0">${esc(fn.label)} ${arrow} ${esc(tn.label)}${e.label?` <span style="color:var(--muted)">(${esc(e.label)})</span>`:''}</div>`;
-            }).join('')}` : ''}
-        </div>
-      </div>`).join('');
+    if (!rels.length) {
+      el.innerHTML = `<div style="text-align:center;padding:20px">
+        <div style="font-size:13px;color:var(--muted);margin-bottom:10px">등록된 관계가 없어요</div>
+        <button class="btn btn-gold btn-sm" onclick="navigate('relations')">🔗 인물관계도 편집</button>
+      </div>`;
+      return;
+    }
+    // 인물별로 관계 그룹핑
+    el.innerHTML = `
+      <div style="margin-bottom:12px;display:flex;justify-content:flex-end">
+        <button class="btn btn-outline btn-sm" onclick="navigate('relations')" style="font-size:11px">✏️ 편집</button>
+      </div>
+      ${chars.map(c => {
+        const charRels = rels.filter(r => r.from === c.name || r.to === c.name);
+        if (!charRels.length) return '';
+        return `
+          <div style="margin-bottom:12px;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:${c.color || (c.group ? getGroupColor(c.group) : 'var(--white)')}">
+            <div style="padding:7px 12px;background:rgba(0,0,0,.04);font-weight:700;font-size:13px">${esc(c.name)}</div>
+            <div style="padding:8px 12px">
+              ${charRels.map(r => {
+                const isFrom = r.from === c.name;
+                const other = isFrom ? r.to : r.from;
+                const arrow = isFrom ? '→' : '←';
+                return `<div style="display:flex;align-items:center;gap:6px;padding:3px 0;font-size:12px;border-bottom:1px solid rgba(0,0,0,.05)">
+                  <span style="color:var(--muted)">${arrow}</span>
+                  <span style="font-weight:600">${esc(other)}</span>
+                  <span style="color:var(--teal);font-size:11px">${esc(r.type)}</span>
+                </div>`;
+              }).join('')}
+            </div>
+          </div>`;
+      }).filter(Boolean).join('')}
+    `;
+
+  } else if (splitTab === 'family') {
+    const families = p.families || [];
+    if (!families.length) {
+      el.innerHTML = `<div style="text-align:center;padding:30px 0">
+        <div style="font-size:32px;margin-bottom:8px">🏰</div>
+        <div style="color:var(--muted);font-size:13px;margin-bottom:12px">등록된 가문 및 집단이 없어요</div>
+        <button class="btn btn-gold btn-sm" onclick="navigate('family')">＋ 추가</button>
+      </div>`;
+      return;
+    }
+    el.innerHTML = `
+      <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+        <button class="btn btn-gold btn-sm" onclick="navigate('family')">＋ 추가</button>
+      </div>
+      ${families.map((f, fi) => {
+        const collapsed = splitFamilyCollapsed['f'+fi];
+        return `
+        <div style="border:1px solid var(--border);border-radius:10px;margin-bottom:10px;overflow:hidden;border-left:3px solid ${f.color||'var(--gold)'}">
+          <div style="padding:8px 12px;background:var(--cream);display:flex;justify-content:space-between;align-items:center;cursor:pointer"
+            onclick="toggleSplitFamily(${fi})">
+            <div>
+              <span style="font-weight:700;font-size:13px">${esc(f.name)}</span>
+              ${f.rank?`<span style="font-size:10px;color:var(--muted);margin-left:6px">${esc(f.rank)}</span>`:''}
+              <span style="font-size:10px;color:var(--muted);margin-left:6px">${(f.members||[]).length}명</span>
+            </div>
+            <span style="font-size:11px;color:var(--muted);transform:rotate(${collapsed?'-90':'0'}deg);display:inline-block;transition:transform .2s">▾</span>
+          </div>
+          ${collapsed ? '' : `
+          <div style="padding:8px 12px">
+            ${f.description?`<div style="font-size:11px;color:var(--muted);margin-bottom:8px;line-height:1.6">${esc(f.description)}</div>`:''}
+            ${(f.members||[]).length===0
+              ? '<div style="font-size:12px;color:var(--muted);text-align:center;padding:8px">구성원 없음</div>'
+              : (f.members||[]).map(m=>`
+                <div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid var(--border);font-size:12px">
+                  <span style="font-weight:600">${esc(m.name)}</span>
+                  ${m.relation?`<span style="color:var(--muted)">${esc(m.relation)}</span>`:''}
+                  ${m.note?`<span style="color:var(--teal);font-size:11px">${esc(m.note)}</span>`:''}
+                </div>`).join('')}
+          </div>`}
+        </div>`;
+      }).join('')}`;
 
   } else if (splitTab === 'memo') {
     const memos = getChapterMemos();
@@ -3904,6 +3964,13 @@ let splitCharCollapsed = {};
 
 function toggleSplitChar(idx) {
   splitCharCollapsed['c'+idx] = !splitCharCollapsed['c'+idx];
+  renderSplitContent();
+}
+
+
+let splitFamilyCollapsed = {};
+function toggleSplitFamily(idx) {
+  splitFamilyCollapsed['f'+idx] = !splitFamilyCollapsed['f'+idx];
   renderSplitContent();
 }
 
@@ -4289,6 +4356,155 @@ function showGroupColorPicker(groupName, btnEl) {
       picker.remove(); document.removeEventListener('click', h);
     }
   }), 0);
+}
+
+
+// ═══════════════════════════════════════════════════════════
+// 가문 (FAMILY)
+// ═══════════════════════════════════════════════════════════
+function renderFamily() {
+  const p = getProject();
+  const families = p.families || [];
+
+  const familyCards = families.length === 0
+    ? `<div class="card empty-state"><div class="emoji">🏰</div><p>가문 및 집단을 추가해보세요.</p></div>`
+    : families.map((f, fi) => `
+      <div class="card" style="margin-bottom:16px;border-left:4px solid ${f.color||'var(--gold)'}">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div style="display:flex;align-items:center;gap:10px">
+            <span class="font-display" style="font-size:18px">${esc(f.name)}</span>
+            ${f.rank?`<span class="tag">${esc(f.rank)}</span>`:''}
+          </div>
+          <div style="display:flex;gap:6px">
+            <button class="btn-icon" onclick="showFamilyModal(${fi})">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            </button>
+            <button onclick="deleteFamily(${fi})" style="width:30px;height:30px;border-radius:50%;background:rgba(181,69,27,.1);border:none;cursor:pointer;color:var(--rust);font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center">×</button>
+          </div>
+        </div>
+        ${f.description?`<div style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.7">${esc(f.description)}</div>`:''}
+        ${f.members&&f.members.length>0?`
+          <div style="border-top:1px solid var(--border);padding-top:10px">
+            <div style="font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.5px;margin-bottom:8px">구성원</div>
+            <div style="display:flex;flex-direction:column;gap:4px">
+              ${f.members.map((m,mi)=>`
+                <div style="display:flex;align-items:center;gap:10px;padding:6px 10px;background:var(--cream);border-radius:8px">
+                  <div style="flex:1">
+                    <span style="font-weight:600;font-size:13px">${esc(m.name)}</span>
+                    ${m.relation?`<span style="font-size:11px;color:var(--muted);margin-left:6px">${esc(m.relation)}</span>`:''}
+                  </div>
+                  ${m.note?`<span style="font-size:11px;color:var(--muted)">${esc(m.note)}</span>`:''}
+                  <button onclick="deleteFamilyMember(${fi},${mi})" style="background:none;border:none;cursor:pointer;color:var(--rust);font-size:14px;width:24px;height:24px">×</button>
+                </div>`).join('')}
+            </div>
+          </div>`:''}
+        <button class="btn btn-outline btn-sm" style="margin-top:10px;width:100%;justify-content:center"
+          onclick="showAddMemberModal(${fi})">＋ 구성원 추가</button>
+      </div>`).join('');
+
+  document.getElementById('main').innerHTML = `
+    <div style="max-width:780px;margin:0 auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px">
+        <h2 class="font-display" style="font-size:22px">가문 및 집단 (${families.length})</h2>
+        <button class="btn btn-gold" onclick="showFamilyModal()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          가문 추가
+        </button>
+      </div>
+      ${familyCards}
+    </div>`;
+  updateBadges();
+}
+
+function showFamilyModal(idx) {
+  const p = getProject();
+  const f = idx !== undefined ? (p.families||[])[idx] : {};
+  const FAMILY_COLORS = ['#c4922a','#e53935','#1e88e5','#43a047','#8e24aa','#546e7a','#e64a19','#00897b'];
+  showModal(`
+    <div class="modal-title">${idx!==undefined?'가문 수정':'가문 및 집단 추가'}</div>
+    <div style="margin-bottom:12px"><label class="label">이름 *</label>
+      <input id="fm-name" value="${esc(f.name||'')}" placeholder="예: 아르켄 가문, 용사 파티, 상인 길드"></div>
+    <div style="margin-bottom:12px"><label class="label">등급/직위</label>
+      <input id="fm-rank" value="${esc(f.rank||'')}" placeholder="예: 공작가, 기사단, 상인 길드"></div>
+    <div style="margin-bottom:14px"><label class="label">설명</label>
+      <textarea id="fm-desc" rows="3" placeholder="가문의 역사, 특징, 가훈 등">${esc(f.description||'')}</textarea></div>
+    <div style="margin-bottom:20px">
+      <label class="label">가문 색상</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px" id="fm-color-group">
+        ${FAMILY_COLORS.map((c,i)=>`
+          <button type="button" onclick="selectEdgeOpt('fm-color-group',this,'${c}')"
+            data-val="${c}" ${(f.color||FAMILY_COLORS[0])===c?'data-selected="1"':''}
+            style="width:32px;height:32px;border-radius:50%;background:${c};cursor:pointer;
+              border:3px solid ${(f.color||FAMILY_COLORS[0])===c?'var(--ink)':'transparent'};
+              transition:all .15s"></button>`).join('')}
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">취소</button>
+      <button class="btn btn-gold" onclick="saveFamily(${idx})">저장</button>
+    </div>`, false);
+  setTimeout(()=>document.getElementById('fm-name')?.focus(),100);
+}
+
+function saveFamily(idx) {
+  const name = document.getElementById('fm-name').value.trim();
+  if (!name) { toast('가문 이름을 입력해주세요.'); return; }
+  const p = getProject();
+  if (!p.families) p.families = [];
+  const f = {
+    id: idx!==undefined ? p.families[idx].id : uid(),
+    name,
+    rank: document.getElementById('fm-rank').value,
+    description: document.getElementById('fm-desc').value,
+    color: document.querySelector('#fm-color-group [data-selected]')?.dataset?.val || '#c4922a',
+    members: idx!==undefined ? p.families[idx].members||[] : [],
+  };
+  if (idx!==undefined) p.families[idx]=f; else p.families.push(f);
+  autoSave(); closeModal(); renderFamily();
+  toast(idx!==undefined?'수정했습니다.':'가문을 추가했습니다!');
+}
+
+function deleteFamily(idx) {
+  confirmDialog('이 가문 및 집단을 삭제합니다.', () => {
+    getProject().families.splice(idx,1);
+    autoSave(); renderFamily();
+    toast('가문 및 집단을 삭제했어요.');
+  });
+}
+
+function showAddMemberModal(fi) {
+  showModal(`
+    <div class="modal-title">구성원 추가</div>
+    <div style="margin-bottom:12px"><label class="label">이름 *</label>
+      <input id="mb-name" placeholder="예: 아르켄 레온하르트"></div>
+    <div style="margin-bottom:12px"><label class="label">가문 내 관계/직위</label>
+      <input id="mb-relation" placeholder="예: 가주, 장남, 방계 3세"></div>
+    <div style="margin-bottom:20px"><label class="label">비고</label>
+      <input id="mb-note" placeholder="예: 현재 실종, 마법 능력 보유"></div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal()">취소</button>
+      <button class="btn btn-gold" onclick="saveFamilyMember(${fi})">추가</button>
+    </div>`, false);
+  setTimeout(()=>document.getElementById('mb-name')?.focus(),100);
+}
+
+function saveFamilyMember(fi) {
+  const name = document.getElementById('mb-name').value.trim();
+  if (!name) { toast('이름을 입력해주세요.'); return; }
+  const p = getProject();
+  if (!p.families[fi].members) p.families[fi].members = [];
+  p.families[fi].members.push({
+    name,
+    relation: document.getElementById('mb-relation').value,
+    note: document.getElementById('mb-note').value,
+  });
+  autoSave(); closeModal(); renderFamily();
+}
+
+function deleteFamilyMember(fi, mi) {
+  getProject().families[fi].members.splice(mi,1);
+  autoSave(); renderFamily();
+  toast('구성원을 삭제했어요.');
 }
 
 // ═══════════════════════════════════════════════════════════════
