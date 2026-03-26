@@ -3540,20 +3540,40 @@ function renderSplitContent() {
       <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
         <button class="btn btn-gold btn-sm" onclick="showCharModal()">＋ 추가</button>
       </div>
-      ${chars.map((c,i) => `
-        <div style="border:1px solid var(--border);border-radius:10px;margin-bottom:12px;overflow:hidden;background:var(--white)">
-          <div style="padding:10px 12px;background:var(--cream);display:flex;justify-content:space-between;align-items:center">
-            <span style="font-weight:700;font-size:14px">${esc(c.name)}</span>
-            <div style="display:flex;gap:6px">
-              <button onclick="showCharModal(${i})" style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--teal)">✏️ 편집</button>
+      ${chars.map((c,i) => {
+        const bg = c.color || (c.group ? getGroupColor(c.group) : 'var(--white)');
+        const collapsed = splitCharCollapsed['c'+i];
+        return `
+        <div style="border:1px solid var(--border);border-radius:10px;margin-bottom:10px;overflow:hidden;background:${bg}">
+          <div style="padding:8px 12px;background:rgba(0,0,0,.04);display:flex;justify-content:space-between;align-items:flex-start;cursor:pointer"
+            onclick="toggleSplitChar(${i})">
+            <div style="flex:1;min-width:0">
+              <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;margin-bottom:2px">
+                <span style="font-weight:700;font-size:14px">${esc(c.name)}</span>
+                ${c.role?`<span style="font-size:10px;background:var(--gold-light);color:var(--gold);padding:1px 7px;border-radius:20px;font-weight:600">${esc(c.role)}</span>`:''}
+                ${c.gender?`<span style="font-size:10px;background:var(--cream);color:var(--muted);padding:1px 7px;border-radius:20px;font-weight:600">${esc(c.gender)}</span>`:''}
+                ${c.age?`<span style="font-size:10px;background:var(--cream);color:var(--muted);padding:1px 7px;border-radius:20px;font-weight:600">${esc(c.age)}세</span>`:''}
+                ${c.alive&&c.alive!=='생존'?`<span style="font-size:10px;background:${c.alive==='사망'?'var(--rust-light)':'var(--cream)'};color:${c.alive==='사망'?'var(--rust)':'var(--muted)'};padding:1px 7px;border-radius:20px;font-weight:600">${esc(c.alive)}</span>`:''}
+              </div>
+              ${c.group?`<div style="font-size:10px;color:var(--muted)">🏛 ${esc(c.group)}</div>`:''}
+            </div>
+            <div style="display:flex;align-items:center;gap:4px;flex-shrink:0;margin-left:6px">
+              <button onclick="event.stopPropagation();showCharModal(${i})"
+                style="background:none;border:none;cursor:pointer;font-size:12px;color:var(--teal)">✏️</button>
+              <span style="font-size:11px;color:var(--muted);transition:transform .2s;display:inline-block;transform:rotate(${collapsed?'-90':'0'}deg)">▾</span>
             </div>
           </div>
-          <div style="padding:10px 12px">
-            ${c.role ? `<div style="margin-bottom:6px"><span style="font-size:10px;color:var(--muted)">역할</span><div style="font-size:13px">${esc(c.role)}</div></div>` : ''}
-            ${c.personality ? `<div style="margin-bottom:6px"><span style="font-size:10px;color:var(--muted)">성격</span><div style="font-size:13px">${esc(c.personality)}</div></div>` : ''}
-            ${c.background ? `<div><span style="font-size:10px;color:var(--muted)">배경</span><div style="font-size:13px">${esc(c.background)}</div></div>` : ''}
-          </div>
-        </div>`).join('')}`;
+          ${collapsed ? '' : `
+          <div style="padding:10px 12px;font-size:12px;line-height:1.8;border-top:1px solid rgba(0,0,0,.06)">
+            ${c.honorific?`<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:6px">${c.honorific.split(',').map(h=>h.trim()).filter(Boolean).map(h=>`<span style="font-size:10px;background:var(--teal-light);color:var(--teal);padding:1px 7px;border-radius:20px;font-weight:600">${esc(h)}</span>`).join('')}</div>`:''}
+            ${c.appearance?`<div style="margin-bottom:3px"><span style="color:var(--muted)">외모 </span>${esc(c.appearance)}</div>`:''}
+            ${c.personality?`<div style="margin-bottom:3px"><span style="color:var(--muted)">성격 </span>${esc(c.personality)}</div>`:''}
+            ${c.background?`<div style="margin-bottom:3px"><span style="color:var(--muted)">배경 </span>${esc(c.background)}</div>`:''}
+            ${c.speech?`<div style="margin-bottom:3px"><span style="color:var(--muted)">특징/능력 </span>${esc(c.speech)}</div>`:''}
+            ${c.goal?`<div><span style="color:var(--rust);font-weight:600">목표 </span>${esc(c.goal)}</div>`:''}
+          </div>`}
+        </div>`;
+      }).join('')}`;
 
   } else if (splitTab === 'plot') {
     const arcs = p.arcs || [];
